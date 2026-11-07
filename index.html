@@ -1,0 +1,2044 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta name="robots" content="noindex">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🩸 血细胞3D形态教学 v18</title>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:"Microsoft YaHei",system-ui,sans-serif; background:#0a0e1a; color:#e0e0e0; overflow:auto; touch-action:auto; }
+.header { background:linear-gradient(135deg,#c62828,#6a1b1a); padding:10px 16px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+.header h1 { font-size:17px; color:#fff; }
+.header p { color:#ffcdd2; font-size:10px; margin-top:2px; }
+.toolbar { display:flex; gap:5px; flex-wrap:wrap; align-items:center; }
+.toolbar button, .toolbar select { padding:6px 10px; border-radius:7px; border:1px solid rgba(255,255,255,.4); background:rgba(255,255,255,.12); color:#fff; font-size:11px; cursor:pointer; transition:all .2s; }
+.toolbar button.active { background:#ff9800; color:#fff; font-weight:bold; border-color:#ff9800; box-shadow:0 2px 8px rgba(255,152,0,.4); }
+.toolbar button:hover:not(.active) { background:rgba(255,255,255,.25); }
+.toolbar select option { background:#1f2937; color:#fff; }
+.main { display:flex; height:calc(100vh - 88px); }
+.sidebar { width:170px; background:#111827; padding:8px; border-right:1px solid #374151; overflow-y:auto; }
+.sidebar .grp { font-size:10px; color:#9ca3af; margin:8px 0 4px; padding-left:4px; border-left:2px solid #c62828; }
+.sidebar button { width:100%; padding:8px 7px; margin-bottom:4px; background:#1f2937; color:#e0e0e0; border:1px solid #374151; border-radius:6px; cursor:pointer; font-size:12px; text-align:left; }
+.sidebar button:hover { background:#c62828; color:#fff; }
+.sidebar button.active { background:#c62828; }
+#quizBtn { width:100%; padding:8px 7px; margin-bottom:4px; background:#1f2937; color:#ff9800; border:1px solid #ff9800; border-radius:6px; cursor:pointer; font-size:12px; text-align:left; font-weight:bold; transition:all .2s; }
+#quizBtn:hover { background:rgba(255,152,0,.15); }
+#uploadModelBtn { width:100%; padding:8px 7px; margin-bottom:4px; background:#1f2937; color:#4fc3f7; border:1px solid #4fc3f7; border-radius:6px; cursor:pointer; font-size:12px; text-align:left; transition:all .2s; }
+#uploadModelBtn:hover { background:rgba(79,195,247,.15); }
+#clearModelBtn { width:100%; padding:6px 7px; margin-bottom:4px; background:#1f2937; color:#f44336; border:1px solid #f44336; border-radius:6px; cursor:pointer; font-size:11px; text-align:left; transition:all .2s; display:none; }
+#clearModelBtn:hover { background:rgba(244,67,54,.15); }
+#uploadSmearBtn { width:100%; padding:8px 7px; margin-bottom:4px; background:#1f2937; color:#66bb6a; border:1px solid #66bb6a; border-radius:6px; cursor:pointer; font-size:12px; text-align:left; transition:all .2s; }
+#uploadSmearBtn:hover { background:rgba(102,187,106,.15); }
+#clearSmearBtn { width:100%; padding:6px 7px; margin-bottom:4px; background:#1f2937; color:#f44336; border:1px solid #f44336; border-radius:6px; cursor:pointer; font-size:11px; text-align:left; transition:all .2s; display:none; }
+#clearSmearBtn:hover { background:rgba(244,67,54,.15); }
+.local-tag { color:#ff4444; font-size:10px; margin-left:4px; }
+.folder-tag { color:#4fc3f7; font-size:10px; margin-left:4px; }
+.viewer { flex:1; position:relative; overflow:hidden; }
+#threeContainer { position:absolute; inset:0; touch-action:none; }
+#threeContainer canvas { touch-action:none; }
+#labelLayer { position:absolute; inset:0; pointer-events:none; touch-action:none; }
+.tag3d { pointer-events:auto; touch-action:auto; cursor:grab; background:rgba(0,0,0,.88); border:1.5px solid #ef5350; color:#fff; padding:3px 9px; border-radius:6px; font-size:11px; transform:translate(-50%,-50%); white-space:nowrap; user-select:none; box-shadow:0 2px 8px rgba(0,0,0,.5); }
+.tag3d.drag { cursor:grabbing; box-shadow:0 4px 16px rgba(239,83,80,.5); z-index:100; }
+.info { width:318px; background:#111827; padding:10px; border-left:1px solid #374151; overflow-y:auto; }
+.info h3 { color:#ef5350; font-size:15px; margin-bottom:5px; }
+.info p { font-size:11px; line-height:1.55; color:#b0bec5; margin-bottom:5px; }
+.tag { display:inline-block; background:#c62828; color:#fff; font-size:9px; padding:1px 5px; border-radius:3px; margin:0 2px 2px 0; }
+.dim { background:#1565c0; color:#90caf9; font-size:10px; padding:6px 8px; border-radius:6px; margin-top:6px; line-height:1.6; }
+.dim b { color:#e3f2fd; font-weight:600; }
+.dim .k { color:#bbdefb; opacity:.85; }
+.sec { margin-top:8px; border-top:1px solid #2b3648; padding-top:7px; }
+.sec-h { font-size:11px; font-weight:bold; margin-bottom:3px; letter-spacing:.3px; }
+.sec-b { font-size:11px; line-height:1.7; color:#cfd8dc; text-align:justify; }
+.nl { margin:0 0 6px; padding-left:14px; text-indent:-14px; }
+.nl-lead { margin:0 0 5px; color:#eceff1; font-weight:600; }
+.nl-flat { margin:0 0 5px; }
+.nl-flat:last-child { margin-bottom:0; }
+.nl:last-child { margin-bottom:0; }
+#labelDetail .nl { margin-bottom:4px; }
+.sec.morph .sec-h { color:#81d4fa; }
+.sec.stain .sec-h { color:#ce93d8; }
+.sec.diff .sec-h { color:#fff59d; }
+.sec.clin .sec-h { color:#a5d6a7; }
+.sec.case .sec-h { color:#ffab91; }
+.sec.lab .sec-h { color:#80cbc4; }
+.sec.morph { border-left:2px solid #81d4fa; padding-left:6px; }
+.sec.stain { border-left:2px solid #ce93d8; padding-left:6px; }
+.sec.diff { border-left:2px solid #fff59d; padding-left:6px; }
+.sec.clin { border-left:2px solid #a5d6a7; padding-left:6px; }
+.sec.case { border-left:2px solid #ffab91; padding-left:6px; }
+.sec.lab { border-left:2px solid #80cbc4; padding-left:6px; }
+.case-tag { display:inline-block; background:#3e2723; color:#ffab91; font-size:9px; padding:1px 5px; border-radius:3px; margin-right:4px; }
+.lab-note { margin-top:5px; font-size:9px; color:#78909c; line-height:1.5; border-top:1px dashed #374151; padding-top:4px; }
+.smear { margin-top:8px; border-top:1px solid #374151; padding-top:8px; }
+.smear h4 { color:#ff9800; font-size:11px; margin-bottom:5px; }
+.smear img { width:100%; border-radius:7px; border:1px solid #374151; min-height:110px; object-fit:cover; background:#000; }
+.smear .err { width:100%; min-height:110px; border:1px dashed #374151; border-radius:7px; display:flex; align-items:center; justify-content:center; color:#6b7280; font-size:10px; text-align:center; padding:10px; }
+.smear .note { font-size:10px; color:#90caf9; margin-top:4px; line-height:1.4; }
+.bottom { height:42px; background:#111827; border-top:1px solid #374151; display:flex; gap:8px; align-items:center; justify-content:center; }
+.bottom button { padding:5px 11px; border-radius:6px; border:1px solid #374151; background:#1f2937; color:#e0e0e0; font-size:11px; cursor:pointer; }
+.bottom button:hover { background:#c62828; color:#fff; }
+.bottom button.active { background:#ff9800; color:#fff; border-color:#ff9800; }
+.mode-label { position:absolute; top:8px; right:8px; background:rgba(198,40,40,.85); color:#fff; padding:3px 9px; border-radius:11px; font-size:10px; pointer-events:none; }
+#errBanner { display:none; position:fixed; top:0; left:0; right:0; background:#c62828; color:#fff; padding:8px; font-size:11px; z-index:9999; text-align:center; }
+#loadingBanner { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,.85); color:#4fc3f7; padding:20px 30px; border-radius:10px; font-size:14px; z-index:9998; border:1px solid #4fc3f7; }
+#quizPanel { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#111827; border:2px solid #ff9800; border-radius:12px; padding:20px; width:90%; max-width:460px; z-index:5000; box-shadow:0 0 40px rgba(255,152,0,.3); transition: all 0.3s ease; }
+#quizPanel.dragging { transition:none; cursor:grabbing; }
+#quizPanelDragHandle { position:absolute; top:26px; left:12px; right:12px; height:20px; cursor:pointer; z-index:2; }
+#quizPanelDragHandle::after { content:"单击折叠/展开"; color:#6b7280; font-size:9px; letter-spacing:1px; }
+#quizPanel h3 { color:#ff9800; margin-bottom:4px; font-size:15px; text-align:center; }
+#quizProgress { font-size:11px; color:#9ca3af; margin-bottom:10px; text-align:center; }
+#quizCellName { font-size:16px; font-weight:bold; text-align:center; margin-bottom:14px; color:#fff; }
+#quizOptions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+.quizOpt { padding:10px 8px; border:1px solid #374151; border-radius:8px; background:#1f2937; color:#e0e0e0; cursor:pointer; font-size:12px; transition:all 0.2s; text-align:center; }
+.quizOpt:hover { border-color:#ff9800; }
+.quizOpt.correct { background:rgba(76,175,80,.3); border-color:#4CAF50; color:#4CAF50; }
+.quizOpt.wrong { background:rgba(244,67,54,.3); border-color:#f44336; color:#f44336; }
+.quizOpt:disabled { cursor:default; opacity:0.7; }
+#quizResult { text-align:center; margin-top:10px; }
+#quizResult button { margin:5px; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:12px; border:none; }
+#quizClose { position:absolute; top:8px; right:12px; background:none; border:none; color:#9ca3af; font-size:16px; cursor:pointer; }
+/* ===== 作业署名标识：右下角半透明浮层，不拦截3D操作 ===== */
+#hwBadge { position:absolute; right:12px; bottom:12px; z-index:2500; pointer-events:none;
+  background:rgba(17,24,39,.5); border:1px solid rgba(255,255,255,.16); border-radius:9px;
+  padding:7px 13px; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
+  text-align:right; user-select:none; box-shadow:0 2px 10px rgba(0,0,0,.35);
+  transition:opacity .25s; max-width:60%; }
+#hwBadge .hw-name { font-size:12px; color:#fff; font-weight:700; letter-spacing:.6px; line-height:1.35; }
+#hwBadge .hw-sub  { font-size:9px; color:#9ca3af; margin-top:2px; letter-spacing:.3px; line-height:1.35; }
+#hwBadge .hw-x { position:absolute; top:-7px; right:-7px; width:17px; height:17px; line-height:15px;
+  border-radius:50%; background:#374151; color:#9ca3af; font-size:10px; text-align:center;
+  cursor:pointer; pointer-events:auto; border:1px solid #4b5563; transition:all .18s; }
+#hwBadge .hw-x:hover { background:#c62828; color:#fff; border-color:#c62828; }
+/* 折叠态：缩成右下角小圆点，点击可随时恢复，绝不会消失丢失 */
+#hwBadge.collapsed { padding:0; width:22px; height:22px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; pointer-events:auto; background:rgba(17,24,39,.45);
+  transition:all .2s; }
+#hwBadge.collapsed:hover { background:rgba(198,40,40,.85); border-color:#c62828; }
+#hwBadge.collapsed .hw-name, #hwBadge.collapsed .hw-sub, #hwBadge.collapsed .hw-x { display:none; }
+#hwBadge.collapsed::after { content:'\1F9E0'; font-size:11px; line-height:1; opacity:.9; }
+#hwBadge.hidden { display:none; }
+@media print { #hwBadge { background:rgba(17,24,39,.92); } #hwBadge .hw-x { display:none; }
+  #hwBadge.collapsed { display:none; } }
+#labelDetail { display:none; position:fixed; background:#1f2937; border:1px solid #ef5350; border-radius:8px; padding:12px; width:268px; z-index:3000; box-shadow:0 4px 16px rgba(0,0,0,.6); pointer-events:auto; }
+#labelDetail h4 { margin-bottom:6px; color:#ef5350; font-size:13px; }
+#labelDetail p { font-size:11px; margin:3px 0; line-height:1.7; color:#cfd8dc; text-align:justify; }
+#detailFoot { margin-top:8px; padding-top:6px; border-top:1px solid #374151; font-size:10px; color:#90a4ae; line-height:1.5; }
+#labelDetail .close { position:absolute; top:4px; right:8px; cursor:pointer; font-size:13px; color:#9ca3af; }
+@media(max-width:768px){ .sidebar{width:140px;} .info{width:246px;} #quizOptions{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<div id="errBanner"></div>
+<div id="loadingBanner">⏳ 加载中...</div>
+
+<div class="header">
+  <div>
+	<h1 data-i18n="app_title">🩸 血细胞3D形态教学 v18</h1>
+	<p data-i18n="app_sub">16种细胞·可拖拽标注·中/英双语·镜下对照·测验·文件夹模型·自定义涂片·病例与检验要点</p>
+  </div>
+  <div class="toolbar">
+	<button id="btn3d" class="active" onclick="setMode('3d')" data-i18n="mode_3d">🧊 立体</button>
+	<button id="btnLabels" class="active" onclick="toggleLabels()" data-i18n="labels_on">🏷 标注</button>
+	<button id="btnRotateTop" onclick="toggleRotate()" class="active">🔄 自动旋转</button>
+	<button id="btnSpeech" onclick="toggleSpeech()">🔇 静音</button>
+	<select id="langSel" onchange="setLang(this.value)">
+	  <option value="zh">中文</option>
+	  <option value="en">English</option>
+		</select>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sidebar" id="sidebar">
+	<button id="quizBtn" onclick="startQuiz()">📋 测验模式</button>
+	<button id="uploadModelBtn" onclick="triggerUpload()">📤 上传本细胞3D模型<span class="local-tag">（仅本机）</span></button>
+	<input id="modelFile" type="file" accept=".glb,.gltf" style="display:none">
+	<button id="clearModelBtn" onclick="clearUploadedModel()">🗑 清除上传模型</button>
+	<button id="uploadSmearBtn">📷 上传本细胞涂片<span class="local-tag">（仅本机）</span></button>
+	<input id="smearFile" type="file" accept="image/png,image/jpeg,image/webp" style="display:none">
+	<button id="clearSmearBtn">🗑 清除涂片</button>
+	<div style="font-size:9px;color:#6b7280;margin:6px 2px 2px;line-height:1.4;">📁 文件夹模型：放入 <code>models/key.glb</code><br>📁 文件夹涂片：放入 <code>images/key.jpg</code></div>
+	<!-- 细胞列表由JS动态生成 -->
+  </div>
+  <div class="viewer">
+	<div id="threeContainer"></div>
+	<div id="labelLayer"></div>
+	<div class="mode-label" id="modeLabel">立体模式</div>
+
+	<div id="quizPanel">
+	  <button id="quizClose" onclick="exitQuiz()">✕</button>
+	  <h3 id="quizTitle">📋 测验模式</h3>
+	  <div id="quizProgress">1 / 5</div>
+	  <div id="quizCellName"></div>
+	  <div id="quizOptions"></div>
+	  <div id="quizResult"></div>
+	</div>
+
+	<div id="labelDetail">
+	  <span class="close" onclick="hideLabelDetail()">✕</span>
+	  <h4 id="detailName"></h4>
+	  <p id="detailInfo"></p>
+	  <div id="detailFoot"></div>
+	</div>
+
+	<div id="hwBadge" onclick="hwBadgeClick(event)">
+	  <span class="hw-x" onclick="collapseHwBadge(event)" title="收起成小图标（点击图标可恢复）">✕</span>
+	  <div class="hw-name" id="hwName"></div>
+	  <div class="hw-sub" id="hwSub"></div>
+	</div>
+  </div>
+  <div class="info">
+	<h3 id="cellName">—</h3>
+	<div id="cellTags"></div>
+	<p id="cellDesc"></p>
+	<div class="dim" id="dimensionPanel" style="display:none;"></div>
+	<div class="sec morph"><div class="sec-h" id="secMorphH">🔍 形态特征</div><div class="sec-b" id="txtMorph"></div></div>
+	<div class="sec stain"><div class="sec-h" id="secStainH">🎨 染色特点</div><div class="sec-b" id="txtStain"></div></div>
+	<div class="sec diff"><div class="sec-h" id="secDiffH">⚖️ 鉴别要点</div><div class="sec-b" id="txtDiff"></div></div>
+	<div class="sec clin"><div class="sec-h" id="secClinH">🏥 临床意义</div><div class="sec-b" id="txtClin"></div></div>
+	<div class="sec case"><div class="sec-h" id="secCaseH">🩺 病例示例</div><div class="sec-b" id="txtCase"></div><div class="lab-note" id="caseNote"></div></div>
+	<div class="sec lab"><div class="sec-h" id="secLabH">⚗️ 检验操作注意点</div><div class="sec-b" id="txtLab"></div></div>
+	<div class="smear">
+	  <h4 data-i18n="smear_title">📷 显微镜镜下观</h4>
+	  <div id="smearBox"></div>
+	  <div class="note" id="smearNote"></div>
+	</div>
+  </div>
+</div>
+
+<div class="bottom">
+  <button onclick="toggleRotate()" id="rotateBtnBottom" class="active">🔄 自动旋转</button>
+  <button onclick="resetView()">↺ 重置视角</button>
+</div>
+
+<script>
+window.onerror = function(msg, url, line, col, error) {
+  var banner = document.getElementById('errBanner');
+  if(banner){ banner.style.display = 'block'; banner.textContent = 'JS错误: ' + msg + ' (行号:' + line + ')'; }
+  console.error('JS Error:', msg, 'Line:', line, error);
+};
+
+const i18n = {
+  zh:{sec_case:"🩺 病例示例",sec_lab:"⚗️ 检验操作注意点",case_note:"※ 病例为教学用示例，数据经过整合与简化，不代表真实个体，不能作为诊疗依据。",sec_morph:"🔍 形态特征",sec_stain:"🎨 染色特点",sec_diff:"⚖️ 鉴别要点",sec_clin:"🏥 临床意义",size_label:"📏 教材尺寸",nc_label:"🧬 核/胞质",ref_label:"📊 参考值",app_title:"🩸 血细胞3D形态教学 v18", app_sub:"16种细胞·可拖拽标注·中/英双语·镜下对照·测验·文件夹模型·自定义涂片·病例与检验要点",mode_smear:"🔬 涂片", mode_3d:"🧊 立体", labels_on:"🏷 标注", labels_off:"🏷 关标注",rotate_on:"🔄 自动旋转", rotate_off:"▶ 开始旋转", reset_view:"↺ 重置视角",smear_title:"📷 显微镜镜下观", grp_peripheral:"外周血", grp_marrow:"骨髓/红系", grp_gran:"粒系", grp_path:"病理示意",no_img:"📷 暂无涂片图片",quiz_title:"📋 测验模式",quiz_correct:"✅ 正确！",quiz_wrong:"❌ 错误！",quiz_score:"🎉 得分：",quiz_restart:"再玩一次",quiz_exit:"退出",quiz_select:"请选择：",detail_size:"📏 大小：",detail_morph:"🔍 形态：",detail_clin:"🏥 临床：",upload_ok:"✅ 模型已加载",upload_fail:"❌ 加载失败",model_cleared:"已恢复默认模型",smear_uploaded:"✅ 涂片已上传",smear_cleared:"已恢复默认涂片",folder_model_loaded:"📁 已加载文件夹模型",folder_smear_loaded:"📁 已加载文件夹涂片"},
+  en:{sec_case:"🩺 Case vignette",sec_lab:"⚗️ Lab notes",case_note:"※ Cases are teaching vignettes with simplified, integrated data; they do not represent real patients and must not be used for diagnosis or treatment.",sec_morph:"🔍 Morphology",sec_stain:"🎨 Staining",sec_diff:"⚖️ Differential",sec_clin:"🏥 Clinical",size_label:"📏 Size",nc_label:"🧬 Nucleus",ref_label:"📊 Reference",app_title:"🩸 Blood Cell 3D v18", app_sub:"16 cells·draggable labels·ZH/EN·microscopic·quiz·folder models·custom smears·cases & lab notes",mode_smear:"🔬 Smear", mode_3d:"🧊 3D", labels_on:"🏷 Labels", labels_off:"🏷 Hide",rotate_on:"🔄 Auto-rotate", rotate_off:"▶ Rotate", reset_view:"↺ Reset",smear_title:"📷 Microscopic view", grp_peripheral:"Peripheral", grp_marrow:"Marrow", grp_gran:"Granulocytic", grp_path:"Pathology",no_img:"📷 No smear image",quiz_title:"📋 Quiz Mode",quiz_correct:"✅ Correct!",quiz_wrong:"❌ Wrong!",quiz_score:"🎉 Score:",quiz_restart:"Play Again",quiz_exit:"Exit",quiz_select:"Select:",detail_size:"📏 Size:",detail_morph:"🔍 Morph:",detail_clin:"🏥 Clinical:",upload_ok:"✅ Model loaded",upload_fail:"❌ Load failed",model_cleared:"Default model restored",smear_uploaded:"✅ Smear uploaded",smear_cleared:"Default smear restored",folder_model_loaded:"📁 Folder model loaded",folder_smear_loaded:"📁 Folder smear loaded"},
+};
+
+/* ==================================================================
+   ✏️  作业署名标识配置 —— 只改下面 4 行即可
+   ==================================================================
+   name   : 姓名（必填）
+   sid    : 学号
+   klass  : 班级
+   course : 课程名
+   show   : true 显示标识；false 完全不显示
+   某一项不需要就设成 ''，会自动隐藏、不留多余分隔符
+   ================================================================== */
+var HW_BADGE = {
+  name:   '周卓文',
+  sid:    '12026070502099',
+  klass:  '26级专升本检验二班',
+  course: '形态学诊断',
+  show:   true
+};
+
+function hwJoin(arr){
+  return arr.filter(function(x){return String(x||'').trim();})
+			.map(function(x){return String(x).trim();})
+			.join('　·　');
+}
+function buildHwBadge(){
+  var box = document.getElementById('hwBadge');
+  if(!box) return;
+  if(!HW_BADGE.show){ box.style.display='none'; return; }
+  var nm = document.getElementById('hwName');
+  var sb = document.getElementById('hwSub');
+  var main = hwJoin([HW_BADGE.name, HW_BADGE.sid]);
+  var sub  = hwJoin([HW_BADGE.klass, HW_BADGE.course]);
+  if(nm) nm.textContent = main;
+  if(sb){ sb.textContent = sub; sb.style.display = sub ? '' : 'none'; }
+  box.classList.remove('hidden');
+  box.style.display = main ? '' : 'none';
+}
+function collapseHwBadge(e){
+  if(e){ e.stopPropagation(); }
+  var box = document.getElementById('hwBadge');
+  if(box){ box.classList.add('collapsed'); box.title = '点击展开署名'; }
+}
+function expandHwBadge(){
+  var box = document.getElementById('hwBadge');
+  if(box && HW_BADGE.show){ box.classList.remove('collapsed'); box.title = ''; }
+}
+function hwBadgeClick(e){
+  // 点击折叠后的小图标即恢复展开
+  var box = document.getElementById('hwBadge');
+  if(box && box.classList.contains('collapsed')) expandHwBadge();
+}
+// 兼容旧命名
+function hideHwBadge(){ collapseHwBadge(); }
+function showHwBadge(){ expandHwBadge(); }
+
+const cells = {
+  red_blood_cell:{
+  group: "peripheral",
+  size: "6–8μm（平均7.2μm）",
+  nc: "无核",
+  ref: "男 (4.3–5.8)×10¹²/L；女 (3.8–5.1)×10¹²/L；Hb 男130–175 g/L、女115–150 g/L",
+  smearKey: "red_blood_cell",
+  t: {
+    "zh": {
+      "n": "红细胞",
+      "d": "双凹圆盘状，无核无细胞器；瑞氏染色粉红色，中央1/3淡染。",
+      "tags": ["双凹圆盘", "无核", "中央淡染"],
+      "morph": "直径6–8μm（平均7.2μm）、厚约2μm的双凹圆盘，边缘厚、中央薄，侧面呈哑铃形。成熟后彻底丧失细胞核与线粒体等细胞器，靠无氧糖酵解供能；胞膜含血型抗原，胞质充满血红蛋白。正常涂片中大小均一，彼此间距约等于自身直径。",
+      "stain": "瑞氏-吉姆萨染色呈均匀的淡粉红/橘红色，因圆盘中央薄、血红蛋白层叠少，形成中央约1/3区域的生理性淡染区，边缘着色深。细胞排列呈缗钱状时为血浆球蛋白增高所致。",
+      "diff": "①与淋巴细胞：红细胞无核、均匀粉红、有中央淡染；淋巴细胞有深紫蓝圆核。②与嗜多色性红细胞：后者胞质带灰蓝色（残留RNA），是网织红细胞的瑞氏染色形态。③与球形红细胞：淡染区消失、直径变小、着色深。④与靶形红细胞：中央出现第二处深染点。",
+      "clin": "淡染区扩大+体积小（小细胞低色素）→缺铁性贫血、地中海贫血、铁粒幼细胞贫血；淡染区消失→遗传性球形红细胞增多症、自身免疫性溶血；大小不均(anisocytosis)、异形(poikilocytosis)提示骨髓造血紊乱；缗钱状排列→多发性骨髓瘤、高球蛋白血症。",
+      "labels": {
+        "nucleus": "无核",
+        "center": "中央淡染",
+        "membrane": "胞膜"
+      },
+      "labelDetail": {
+        "nucleus": "成熟红细胞在骨髓内已排出细胞核，故涂片中完全无核，这是与淋巴细胞最根本的区别。",
+        "center": "中央淡染区约占细胞直径1/3，源于双凹形态使中央血红蛋白层薄。>1/2为淡染区扩大（缺铁），消失则见于球形红细胞。",
+        "membrane": "胞膜含ABO、Rh等血型抗原与带3蛋白等骨架蛋白，膜蛋白缺陷可导致遗传性球形/椭圆形红细胞症。"
+      },
+      "size": "6–8μm（平均7.2μm）",
+      "nc": "无核",
+      "ref": "男 (4.3–5.8)×10¹²/L；女 (3.8–5.1)×10¹²/L；Hb 男130–175 g/L、女115–150 g/L",
+      "case": "女性，28岁，乏力、头晕3个月，月经量偏多。Hb 82 g/L，MCV 72 fL，MCH 22 pg，RDW 17.5%，血清铁蛋白 6 μg/L。外周血涂片：红细胞大小不一，中央淡染区明显扩大，部分呈环形，可见椭圆形与少量靶形红细胞。骨髓铁染色：细胞外铁消失。判读：小细胞低色素性贫血，结合铁蛋白降低，符合缺铁性贫血。要点：中央淡染区扩大是小细胞低色素最直观的形态学证据，补铁治疗后网织红细胞先升、淡染区后恢复。",
+      "lab": "①瑞氏染液 pH 须控制在 6.4–6.8 并用缓冲液配制：偏酸则红细胞偏红、淡染区不明显；偏碱则偏蓝、淡染区假性扩大，直接影响低色素判断。②镜检须选择涂片体尾交界处，此处红细胞平铺、互不重叠；重叠处会出现假性淡染。③EDTA 抗凝血放置超过 4 小时红细胞形态开始改变，6 小时以上出现棘形、口形等假象，制涂片应在采血后 2–4 小时内完成。④涂片须立即挥干，否则红细胞皱缩、中央淡染区变浅甚至消失。⑤红细胞形态异常应采用油镜连续观察 1000 个红细胞或至少 10 个代表性高倍视野后报告，避免单视野取样偏差。⑥不可凭 MCV 报告低色素，必须以涂片形态为准——MCV 正常也可存在明显淡染区扩大（早期缺铁）。"
+    },
+    "en": {
+      "n": "RBC",
+      "d": "Biconcave disc, anucleate; pink with central pallor.",
+      "tags": ["Biconcave", "No nucleus", "Pallor"],
+      "morph": "6-8 µm biconcave disc ~2 µm thick; no nucleus or organelles; cytoplasm packed with hemoglobin.",
+      "stain": "Wright stain: uniform pink-orange with a central pale area covering about one third of the cell.",
+      "diff": "vs lymphocyte (nucleated, blue cytoplasm); vs spherocyte (no pallor, smaller, denser); vs polychromatic RBC (grey-blue tint = reticulocyte).",
+      "clin": "Enlarged pallor + microcytosis → iron deficiency, thalassemia; absent pallor → hereditary spherocytosis; rouleaux → myeloma/hyperglobulinemia.",
+      "labels": {
+        "nucleus": "No nucleus",
+        "center": "Central pallor",
+        "membrane": "Membrane"
+      },
+      "labelDetail": {
+        "nucleus": "Mature RBCs extrude the nucleus in marrow; the key feature distinguishing them from lymphocytes.",
+        "center": "Physiologic pallor occupies ~1/3 of the diameter; widened in iron deficiency, lost in spherocytosis.",
+        "membrane": "Carries ABO/Rh antigens and a spectrin-based skeleton; defects cause hereditary spherocytosis/elliptocytosis."
+      },
+      "size": "6–8 µm (mean 7.2)",
+      "nc": "Anucleate",
+      "ref": "Male (4.3–5.8)×10¹²/L; female (3.8–5.1)×10¹²/L; Hb 130–175 g/L (M), 115–150 g/L (F)",
+      "case": "Woman, 28, fatigue and dizziness for 3 months with menorrhagia. Hb 82 g/L, MCV 72 fL, MCH 22 pg, ferritin 6 µg/L. Smear: anisocytosis with markedly widened central pallor, pencil and target cells. Marrow iron: absent storage iron. Interpretation: microcytic hypochromic anemia consistent with iron deficiency. Key point: Reticulocytosis precedes recovery of the pallor after iron therapy.",
+      "lab": "① Keep Wright stain at pH 6.4-6.8 with buffer: an acidic stain makes RBCs too red and hides pallor, an alkaline stain makes them blue and falsely widens it. ② Assess pallor only in the body-tail junction where cells lie flat and separate; overlapping cells create pseudo-pallor. ③ EDTA blood older than 4 h shows artifactual echinocytes and stomatocytes; make smears within 2-4 h of collection. ④ Dry the smear immediately, otherwise cells crenate and the pallor fades. ⑤ Report morphology after reviewing 1000 RBCs or at least 10 representative high-power fields. ⑧ Never call hypochromia from MCV alone - early iron deficiency can widen pallor while MCV is still normal."
+    }
+  }
+  },
+  reticulocyte:{
+  group: "peripheral",
+  size: "7.2–9μm",
+  nc: "无核，残留RNA",
+  ref: "成人百分率 0.5%–1.5%；绝对值 (24–84)×10⁹/L；新生儿可达 2%–6%",
+  smearKey: "reticulocyte",
+  t: {
+    "zh": {
+      "n": "网织红细胞",
+      "d": "脱核后尚未完全成熟的红细胞，胞质残留核糖体RNA，需活体染色才显蓝色网状。",
+      "tags": ["未成熟", "RNA残存", "活体染色"],
+      "morph": "略大于成熟红细胞（8–9μm），仍为无核的双凹圆盘，但胞质内尚残留少量核糖体RNA、线粒体与残余细胞器，故瑞氏染色下可呈轻度嗜多色性（灰蓝灰色）。自骨髓释放后约24–48小时内完全成熟。",
+      "stain": "瑞氏染色几乎无法与成熟红细胞区分，仅表现为胞质略带灰蓝的嗜多色性大红细胞；必须用活体染色（煌焦油蓝或新亚甲蓝）使残留RNA沉淀，才显现蓝色网状结构或蓝色颗粒。",
+      "diff": "①Howell-Jolly小体：单个或多个紫红色圆点，为核染色质残留，非网状。②Heinz小体：需活体染色，为变性血红蛋白沉淀，位于胞膜内侧。③嗜多色性红细胞：即网织红细胞的瑞氏染色形态，二者同物异名。④Heilmeyer分型：0型核残迹团块、Ⅰ型致密球网、Ⅱ型疏松网、Ⅲ型散在颗粒、Ⅳ型零星点；外周血以Ⅲ、Ⅳ型为主，出现Ⅰ、Ⅱ型提示骨髓释放加速。",
+      "clin": "增高（>1.5%）提示骨髓红系代偿增生旺盛：溶血性贫血、急性失血、缺铁性或巨幼细胞性贫血治疗后的疗效反应（补铁后5–7天达峰）。降低提示骨髓造血衰竭：再生障碍性贫血、纯红细胞再生障碍、骨髓病性贫血。是判断贫血“增生性vs增生低下”最简便的指标。",
+      "labels": {
+        "reticulum": "网状物",
+        "cell": "胞体"
+      },
+      "labelDetail": {
+        "reticulum": "蓝色网状/颗粒状物质即残留的核糖体RNA，被煌焦油蓝活体染成蓝色；网越致密说明细胞越幼稚。",
+        "cell": "胞体略大于成熟红细胞，仍无核；瑞氏染色下呈嗜多色性（灰蓝），活体染色才可见网状物。"
+      },
+      "size": "7.2–9μm",
+      "nc": "无核，残留RNA",
+      "ref": "成人百分率 0.5%–1.5%；绝对值 (24–84)×10⁹/L；新生儿可达 2%–6%",
+      "case": "男性，35岁，黄疸伴浓茶色尿1周。Hb 78 g/L，网织红细胞 6.8%（绝对值 210×10⁹/L），TBIL 68 μmol/L（间接胆红素为主），LDH 显著升高，直接抗人球蛋白试验阳性。涂片：球形红细胞易见，嗜多色性大红细胞明显增多，可见有核红细胞。判读：网织红细胞显著升高说明骨髓红系代偿能力良好，结合抗人球蛋白试验阳性，符合自身免疫性溶血性贫血。对照：若为再生障碍性贫血，Hb 同样低下但网织红细胞绝对值显著降低——网织红是区分＂增生性＂与＂增生低下性＂贫血最简便的指标。",
+      "lab": "①煌焦油蓝与新亚甲蓝染液应避光保存、定期更换，染液陈旧或沉淀则网状物不着色，造成假阴性。②活体染色时间 15–20 分钟（室温），时间不足网状物淡染难以辨认，过长则背景深染干扰判读；染色后须尽快推片，久置则染液蒸发、结构变形。③计数：油镜下计数 1000 个红细胞中的网织红细胞，推荐使用 Miller 窥盘以减少计数误差与视野偏倚。④百分率受红细胞总数影响（贫血时会假性升高），必须同时报告绝对值（网织红×红细胞总数），必要时计算网织红细胞生成指数 RPI。⑤瑞氏染色下不要把嗜多色性大红细胞漏判——它们就是网织红细胞的常规染色形态，二者同物异名。⑥网织红内的 Howell-Jolly 小体为单个紫红色圆点、Heinz 小体需活体染色，均非网状物，勿计入网织红判读。"
+    },
+    "en": {
+      "n": "Reticulocyte",
+      "d": "Immature anucleate RBC with residual ribosomal RNA; revealed only by supravital staining.",
+      "tags": ["Immature", "RNA", "Supravital stain"],
+      "morph": "Slightly larger (8-9 µm) than mature RBC; residual ribosomes, mitochondria; matures within 24-48 h in blood.",
+      "stain": "Invisible on Wright stain except as polychromatophilic (grey-blue) macrocyte; brilliant cresyl blue / new methylene blue precipitates RNA into a blue reticulum.",
+      "diff": "Howell-Jolly body (single purple dot, DNA remnant); Heinz body (supravital stain, denatured Hb); polychromatic RBC is the same cell on Wright stain; Heilmeyer grades 0-IV, peripheral blood normally III-IV.",
+      "clin": ">1.5% = marrow erythroid hyperplasia: hemolysis, acute blood loss, response to iron/B12/folate therapy; low = marrow failure: aplastic anemia, pure red cell aplasia.",
+      "labels": {
+        "reticulum": "Reticulum",
+        "cell": "Cell"
+      },
+      "labelDetail": {
+        "reticulum": "Precipitated ribosomal RNA stained blue by brilliant cresyl blue; denser network = younger cell.",
+        "cell": "Slightly larger than a mature RBC, still anucleate; appears polychromatophilic on Wright stain."
+      },
+      "size": "7.2–9 µm",
+      "nc": "Anucleate, residual RNA",
+      "ref": "Adults 0.5%–1.5%; absolute (24–84)×10⁹/L; neonates up to 2%–6%",
+      "case": "Man, 35, jaundice and dark urine for 1 week. Hb 78 g/L, reticulocytes 6.8% (absolute 210×10⁹/L), mainly unconjugated bilirubin, high LDH, positive direct antiglobulin test. Smear: spherocytes, numerous polychromatic macrocytes, occasional nucleated RBCs. Interpretation: brisk reticulocytosis shows intact marrow compensation; with a positive DAT this is autoimmune hemolytic anemia. Contrast: aplastic anemia has equally low Hb but a low absolute reticulocyte count.",
+      "lab": "① Store brilliant cresyl blue / new methylene blue protected from light and replace regularly; old or precipitated dye gives false negatives. ② Stain 15-20 min at room temperature: too short gives a faint reticulum, too long darkens the background; spread the film promptly after staining. ③ Count 1000 RBCs under oil; a Miller eyepiece disc reduces counting error and field bias. ④ Always report the absolute count (percentage × RBC count), since anaemia falsely raises the percentage; calculate the RPI when appropriate. ⑤ Do not miss polychromatic macrocytes on Wright stain - they are reticulocytes seen by routine staining. ⑥ Howell-Jolly bodies (single purple-red dot) and Heinz bodies (supravital stain) are not reticulum; do not score them as reticulocytes."
+    }
+  }
+  },
+  platelet:{
+  group: "peripheral",
+  size: "2–4μm",
+  nc: "无核碎片",
+  ref: "(125–350)×10⁹/L；MPV 7–11 fL",
+  smearKey: "platelet",
+  t: {
+    "zh": {
+      "n": "血小板",
+      "d": "巨核细胞胞质脱落的无核碎片，直径2–4μm，分透明区与颗粒区。",
+      "tags": ["胞质碎片", "颗粒区", "无核"],
+      "morph": "由骨髓成熟巨核细胞胞质分隔脱落而成，直径2–4μm，呈星形、逗点状或不规则形，无细胞核。可分为外周的透明区（hyalomere，透明淡蓝，含微管与开放管道系统）与中央的颗粒区（granulomere，含α颗粒、致密体、溶酶体）。涂片中常成簇聚集于涂片尾部与边缘。",
+      "stain": "瑞氏染色胞质呈淡蓝色，中央颗粒区密布细小紫红色嗜天青颗粒，常聚集成簇使中央看似紫色团块，与周边淡蓝形成双色对比。",
+      "diff": "①与染料沉渣/杂质：沉渣大小不等、形态不规则、无颗粒结构、折光性差。②与细菌：细菌形态一致、无颗粒区。③与疟原虫：疟原虫有核红染与胞质蓝染，且含疟色素。④与红细胞碎片：碎片无颗粒区、呈规则弧形。",
+      "clin": "数量减少(<125×10⁹/L)：免疫性血小板减少症(ITP)、再生障碍性贫血、DIC、脾功能亢进、药物性；增多(>350×10⁹/L)：反应性（感染、炎症、缺铁、术后、脾切除）与克隆性（真性红细胞增多症、原发性血小板增多症、CML）。大血小板（直径>4μm、MPV增大）提示破坏过多后骨髓代偿生成活跃或遗传性巨血小板病。",
+      "labels": {
+        "granule": "颗粒",
+        "plasma": "胞质"
+      },
+      "labelDetail": {
+        "granule": "中央颗粒区含α颗粒（PF4、β-TG、vWF、纤维蛋白原）、致密体（ADP、5-HT、钙）与溶酶体，活化时释放参与止血。",
+        "plasma": "外周透明区为透明淡蓝色的hyalomere，含微管环与开放管道系统，维持盘状形态并作为颗粒释放通道。"
+      },
+      "size": "2–4μm",
+      "nc": "无核碎片",
+      "ref": "(125–350)×10⁹/L；MPV 7–11 fL",
+      "case": "女性，32岁，皮肤瘀点、牙龈出血、月经增多2周。Hb 与 WBC 正常，PLT 18×10⁹/L，血细胞分析仪提示血小板减少。涂片复核：血小板罕见，偶见单个大血小板，红细胞与白细胞形态正常，未见原始细胞与裂红细胞。骨髓：巨核细胞数量增多（全片 >100 个），以幼稚型与颗粒型为主，产板型巨核细胞少见。判读：血小板减少而骨髓巨核细胞增多且成熟受阻，符合免疫性血小板减少症（ITP）。要点：涂片复核是排除 EDTA 假性血小板减少的必要步骤，不可仅凭仪器计数下诊断。",
+      "lab": "①血小板易聚集，涂片中常成簇分布于尾部与边缘，估算数量必须在体尾交界处的均匀分布区进行，成簇区域不可用于计数。②EDTA 依赖的假性血小板减少（EDTA-PTCP）可使仪器计数假性降低，凡仪器提示血小板显著减少而无出血表现者，必须涂片复核，必要时改用枸橼酸钠抗凝管或预温管重采。③Fonio 估算法：油镜计数 1000 个红细胞中的血小板数 × 红细胞总数 ÷ 1000，仅适用于血小板显著减少时的粗略核对，不作为常规报告方法。④采血须顺畅、一针见血，反复穿刺或血流不畅会激活血小板，导致涂片中聚集增多、形态改变。⑤大血小板易被误认为淋巴细胞碎片或红细胞碎片，鉴别要点是有无中央颗粒区（颗粒区呈紫红色细小颗粒聚簇）。⑥涂片制备后须及时染色，久置会使血小板肿胀、颗粒模糊。"
+    },
+    "en": {
+      "n": "Platelet",
+      "d": "Anucleate cytoplasmic fragment of megakaryocyte; 2-4 µm with hyalomere and granulomere.",
+      "tags": ["Fragment", "Granulomere", "No nucleus"],
+      "morph": "2-4 µm irregular or star-shaped fragment shed from megakaryocyte cytoplasm; outer hyalomere (microtubules) and central granulomere (alpha granules, dense bodies).",
+      "stain": "Pale blue cytoplasm with a central cluster of fine purple-red azurophilic granules, giving a two-tone appearance.",
+      "diff": "vs stain precipitate (irregular, no granules); vs bacteria (uniform, no granules); vs malaria parasite (red nucleus, blue cytoplasm, pigment); vs RBC fragment (no granules).",
+      "clin": "Low (<125×10⁹/L): ITP, aplasia, DIC, hypersplenism; high (>350×10⁹/L): reactive (infection, iron deficiency, post-splenectomy) or clonal (PV, ET, CML). Large platelets = increased destruction with compensation.",
+      "labels": {
+        "granule": "Granule",
+        "plasma": "Plasma"
+      },
+      "labelDetail": {
+        "granule": "Granulomere contains alpha granules (PF4, vWF, fibrinogen) and dense bodies (ADP, serotonin) released on activation.",
+        "plasma": "Hyalomere is the pale outer zone with a microtubular ring and open canalicular system."
+      },
+      "size": "2–4 µm",
+      "nc": "Anucleate fragment",
+      "ref": "(125–350)×10⁹/L; MPV 7–11 fL",
+      "case": "Woman, 32, petechiae, gingival bleeding and menorrhagia for 2 weeks. Hb and WBC normal, PLT 18×10⁹/L. Smear review: platelets very scanty with occasional large forms; no blasts or schistocytes. Marrow: increased megakaryocytes (>100 per film), mostly immature and granular forms with few platelet-producing forms. Interpretation: thrombocytopenia with increased but maturation-arrested megakaryocytes fits immune thrombocytopenia (ITP). Key point: Smear review is mandatory to exclude EDTA pseudothrombocytopenia.",
+      "lab": "① Platelets clump and cluster at the smear tail and edges; estimate numbers only in the evenly spread body-tail junction, never in clumps. ② EDTA-dependent pseudothrombocytopenia gives falsely low analyser counts: always review a smear when counts are very low without bleeding, and repeat in citrate or pre-warmed tubes if needed. ③ The Fonio estimate (platelets per 1000 RBCs × RBC count ÷ 1000) is only a rough cross-check in severe thrombocytopenia, not a routine method. ④ A clean single venepuncture is essential; traumatic or slow draws activate platelets and cause clumping. ⑤ Large platelets mimic lymphocyte or RBC fragments - look for the central granulomere with clustered purple-red granules. ⑥ Stain promptly; delayed staining swells platelets and blurs their granules."
+    }
+  }
+  },
+  neutrophil_seg:{
+  group: "peripheral",
+  size: "10–15μm",
+  nc: "核2–5叶（3叶最多）",
+  ref: "占白细胞 40%–75%；绝对值 (1.8–6.3)×10⁹/L",
+  smearKey: "neutrophil",
+  t: {
+    "zh": {
+      "n": "中性分叶核粒细胞",
+      "d": "核分2–5叶（以3叶最多）、叶间以细丝相连；胞质淡粉红，布满细小淡紫中性颗粒。",
+      "tags": ["分叶2–5", "深紫红核", "细颗粒"],
+      "morph": "胞体10–15μm，圆形；核分2–5叶（3叶最多，5叶以上为核右移），叶与叶之间由一条染色质细丝相连，核染色质高度浓集成块状，无核仁；胞质丰富，淡粉红色，充满大量细小的中性颗粒（直径约0.1μm，光学镜下勉强可见），另有少量较大的嗜天青颗粒。",
+      "stain": "核呈深紫红色，染色质凝集成块、副染色质明显；胞质淡粉红/淡橙红色，中性颗粒细小均匀呈淡紫红色，两者叠加使胞质呈特征性的“细砂纸样”粉红色。",
+      "diff": "①与杆状核：分叶核最窄处宽度 ≤ 最宽处的1/3，且有核丝相连；杆状核最窄处 > 1/3。②与嗜酸/嗜碱：颗粒颜色与大小不同（橘红粗大/深紫蓝大小不等）。③中毒改变：胞质出现粗大深紫黑色中毒颗粒、Döhle小体（淡蓝色胞质包涵体）、空泡变性，三者合称中毒三联，提示严重细菌感染。④核棘突（鼓槌体）为X染色体失活遗迹，多见于女性。",
+      "clin": "增多：急性化脓性细菌感染、组织坏死、急性出血/溶血、恶性肿瘤、糖皮质激素、应激、痛风、CML。减少：病毒感染（流感、肝炎）、伤寒、疟疾、药物（氯霉素、抗甲状腺药、化疗）、再生障碍性贫血、自身免疫性中性粒细胞减少。核左移（杆状核>5%）提示急性感染；核右移（≥5叶）提示巨幼细胞性贫血、缺铁性贫血、骨髓增生异常。",
+      "labels": {
+        "nucleus": "分叶核",
+        "granule": "中性颗粒",
+        "cytoplasm": "胞质"
+      },
+      "labelDetail": {
+        "nucleus": "核分2–5叶、以3叶最多，叶间仅以一条染色质细丝相连——这是判定分叶核（而非多个核）的关键，也是与杆状核鉴别的核心（最窄处≤最宽处1/3）。",
+        "granule": "中性颗粒极细小（约0.1μm）、淡紫红色，均匀布满胞质；另有少量较大的嗜天青颗粒（含髓过氧化物酶）。",
+        "cytoplasm": "胞质淡粉红色、丰富，含大量细颗粒。出现中毒颗粒、Döhle小体、空泡即提示严重感染或炎症。"
+      },
+      "size": "10–15μm",
+      "nc": "核2–5叶（3叶最多）",
+      "ref": "占白细胞 40%–75%；绝对值 (1.8–6.3)×10⁹/L",
+      "case": "男性，68岁，发热伴寒战2天，咳脓痰。WBC 18.6×10⁹/L，中性粒细胞 88%，杆状核 12%，CRP 156 mg/L，胸片右下肺渗出。涂片：中性粒细胞胞质内可见粗大深紫黑色中毒颗粒，部分细胞有空泡变性，少数可见淡蓝色 Döhle 小体。判读：白细胞与中性粒细胞显著增多伴明显核左移，叠加中毒三联（中毒颗粒、Döhle 小体、空泡），符合急性化脓性细菌感染。要点：中毒改变的有无与程度是判断感染严重程度和预后的实用指标，比单纯白细胞计数更有价值。",
+      "lab": "①白细胞分类计数必须在涂片体尾交界处进行，采用＂城墙式＂迂回移动视野，避免重复计数或遗漏；油镜下分类 100 个，有异常时计数 200 个。②中毒颗粒的判读依赖染色质量：染色偏碱时正常中性颗粒也会显得粗大，易造成假阳性，须与同期正常细胞对比。③抗原EDTA 血放置超过 6 小时，粒细胞可出现空泡、核固缩与胞质嗜碱性增强，属体外假象，不可误判为中毒改变。④Döhle 小体为淡蓝色胞质包涵体，须与残留 RNA、染色沉渣鉴别；应与中毒颗粒、空泡合并观察，单见一项不足以判断。⑤报告核左移时应同时给出杆状核百分比；出现 5 叶以上核或核右移应单独提示，因其指向巨幼细胞性贫血与骨髓增生异常。⑥发现鼓槌体（核棘突）为女性 X 染色体失活遗迹，属正常变异，不需报告为异常。"
+    },
+    "en": {
+      "n": "Seg Neutrophil",
+      "d": "Nucleus with 2-5 lobes joined by thin filaments; pale pink cytoplasm with fine granules.",
+      "tags": ["2-5 lobes", "Dark purple", "Fine granules"],
+      "morph": "10-15 µm round cell; 2-5 nuclear lobes (3 most common) linked by a chromatin filament; coarse clumped chromatin; abundant pale pink cytoplasm packed with fine granules.",
+      "stain": "Dark purple-red nucleus; pale pink cytoplasm with fine lilac neutrophilic granules giving a ground-glass pink appearance.",
+      "diff": "vs band form (narrowest point >1/3 of widest); vs eosinophil/basophil (granule colour/size); toxic granulation, Döhle bodies and vacuoles = severe bacterial infection.",
+      "clin": "High: bacterial infection, necrosis, steroids, stress, CML. Low: viral infection, typhoid, drugs, aplastic anemia. Left shift (bands >5%) = acute infection; right shift (≥5 lobes) = megaloblastic anemia, MDS.",
+      "labels": {
+        "nucleus": "Lobed nucleus",
+        "granule": "Granules",
+        "cytoplasm": "Cytoplasm"
+      },
+      "labelDetail": {
+        "nucleus": "2-5 lobes joined by a thin chromatin filament; narrowest point ≤1/3 of the widest distinguishes it from a band form.",
+        "granule": "Fine lilac neutrophilic granules (~0.1 µm) fill the cytoplasm; a few larger azurophilic granules contain myeloperoxidase.",
+        "cytoplasm": "Abundant pale pink cytoplasm; toxic granulation, Döhle bodies or vacuoles indicate severe infection."
+      },
+      "size": "10–15 µm",
+      "nc": "2–5 lobes (3 most common)",
+      "ref": "40%–75% of WBC; absolute (1.8–6.3)×10⁹/L",
+      "case": "Man, 68, fever with rigors for 2 days and productive cough. WBC 18.6×10⁹/L, neutrophils 88%, bands 12%, CRP 156 mg/L, right lower zone consolidation. Smear: coarse dark toxic granulation, cytoplasmic vacuolation and occasional Döhle bodies. Interpretation: marked neutrophilia with left shift plus the toxic triad fits acute pyogenic bacterial infection. Key point: The presence and degree of toxic change reflect severity and prognosis better than the total count alone.",
+      "lab": "① Perform the differential in the body-tail junction using a battlement-track sweep to avoid double counting; count 100 cells under oil (200 if abnormal). ② Toxic granulation depends on stain quality: an alkaline stain coarsens normal granules and gives false positives - always compare with concurrent normal cells. ③ EDTA blood stored over 6 h produces granulocyte vacuolation, nuclear pyknosis and increased cytoplasmic basophilia as in-vitro artifacts. ④ Döhle bodies are pale blue cytoplasmic inclusions that must be distinguished from residual RNA and stain precipitate; interpret them together with toxic granules and vacuoles. ⑤ When reporting a left shift give the band percentage; flag ≥5 lobes (right shift) separately as it suggests megaloblastic anaemia or MDS. ⑥ Drumstick appendages are inactive X chromatin in women - a normal variant, not to be reported as abnormal."
+    }
+  }
+  },
+  neutrophil_stab:{
+  group: "peripheral",
+  size: "10–15μm",
+  nc: "杆状核，未分叶",
+  ref: "占白细胞 0%–5%；绝对值 (0.04–0.4)×10⁹/L",
+  smearKey: "neutrophil",
+  t: {
+    "zh": {
+      "n": "中性杆状核粒细胞",
+      "d": "核呈弯曲杆状/C形/S形，最窄处宽度 > 最宽处1/3，尚未分叶。",
+      "tags": ["杆状", "未分叶", "核左移"],
+      "morph": "胞体10–15μm，形态与分叶核中性粒细胞基本相同，胞质同样淡粉红并充满细小中性颗粒；唯一区别在于核：核呈马蹄形、C形、S形或弯曲带状，全程粗细较均匀，最窄处宽度超过最宽处的1/3，核染色质较分叶核略疏松。",
+      "stain": "核深紫红色，染色质浓集程度略低于分叶核；胞质淡粉红，颗粒与分叶核一致。中毒时同样可出现中毒颗粒与空泡。",
+      "diff": "①与分叶核（最核心）：测量核最窄处与最宽处——最窄处 > 最宽处1/3 判为杆状核；≤1/3 判为分叶核。②与晚幼粒细胞：晚幼粒核呈肾形、凹陷明显但尚未拉长成杆，胞质中特异性颗粒刚出现，常伴少量嗜碱性胞质。③与单核细胞：单核核染色质疏松呈网状、胞质灰蓝且量多。",
+      "clin": "外周血比例 >5% 即称“核左移”，是急性细菌性感染、急性失血、急性溶血、组织坏死的重要信号；伴中毒颗粒、Döhle小体、空泡时提示感染严重、预后较差。极度左移（出现晚幼粒、中幼粒甚至早幼粒）称为类白血病反应。再生障碍性贫血时杆状核往往同时显著减少。",
+      "labels": {
+        "nucleus": "杆状核",
+        "granule": "中性颗粒"
+      },
+      "labelDetail": {
+        "nucleus": "核呈弯曲的杆/C/S形，判定标准是核最窄处宽度 > 最宽处的1/3；比例>5%即核左移，提示急性感染或组织坏死。",
+        "granule": "与分叶核相同的细小淡紫中性颗粒；重症感染时可变为粗大的深紫黑色中毒颗粒。"
+      },
+      "size": "10–15μm",
+      "nc": "杆状核，未分叶",
+      "ref": "占白细胞 0%–5%；绝对值 (0.04–0.4)×10⁹/L",
+      "case": "男性，45岁，转移性右下腹痛伴发热1天。WBC 15.2×10⁹/L，中性粒细胞 85%，其中杆状核 18%（绝对值 2.3×10⁹/L），CRP 88 mg/L。涂片：杆状核粒细胞明显增多，胞质可见中毒颗粒，未见原始细胞。术后证实为急性化脓性阑尾炎。判读：杆状核比例 >5% 即为核左移，提示急性细菌感染或组织坏死，且往往早于白细胞总数升高出现，是早期敏感指标。要点：核左移伴中毒改变提示病情较重；若同时出现晚幼粒、中幼粒细胞，称为类白血病反应，需与慢性粒细胞白血病鉴别。",
+      "lab": "①杆状核与分叶核的判别标准须统一：核最窄处宽度 > 最宽处 1/3 判为杆状核，≤1/3 判为分叶核；判读时须确认叶间是否有染色质细丝相连。②该项判读主观性较强，不同检验者之间差异可达 5%，科室应定期开展比对与培训，并在报告中说明所采用的判定标准。③染色偏深时叶间细丝不易分辨，易将分叶核误判为杆状核，应调整染色时间或染液 pH 后复检。④涂片过厚处细胞核重叠、形态扭曲，无法判读核形，必须在细胞平铺、互不重叠的区域进行分类。⑤杆状核应计入中性粒细胞分类总数内报告，不可单独另计。⑥报告核左移时必须给出具体百分比而非仅写＂可见＂，以便临床动态比较。"
+    },
+    "en": {
+      "n": "Band Neutrophil",
+      "d": "Curved rod/C/S-shaped nucleus, narrowest point >1/3 of the widest; not yet segmented.",
+      "tags": ["Band", "Unsegmented", "Left shift"],
+      "morph": "10-15 µm; identical cytoplasm to segmented neutrophil; nucleus is a curved band with fairly uniform width, chromatin slightly less condensed.",
+      "stain": "Dark purple nucleus with slightly looser chromatin than the segmented form; pale pink cytoplasm and fine granules.",
+      "diff": "Key rule: narrowest point >1/3 of widest = band; ≤1/3 = segmented. vs metamyelocyte (kidney-shaped, just-indented nucleus).",
+      "clin": ">5% bands = left shift: acute bacterial infection, acute blood loss, hemolysis, necrosis. With toxic granulation/vacuoles = severe infection. Extreme left shift = leukemoid reaction.",
+      "labels": {
+        "nucleus": "Band nucleus",
+        "granule": "Granules"
+      },
+      "labelDetail": {
+        "nucleus": "Curved band; narrowest point >1/3 of the widest. >5% in blood = left shift, signalling acute infection.",
+        "granule": "Same fine lilac granules as segmented neutrophils; become coarse dark toxic granules in severe infection."
+      },
+      "size": "10–15 µm",
+      "nc": "Band nucleus, unsegmented",
+      "ref": "0%–5% of WBC; absolute (0.04–0.4)×10⁹/L",
+      "case": "Man, 45, right lower quadrant pain and fever for 1 day. WBC 15.2×10⁹/L, neutrophils 85% with 18% bands (absolute 2.3×10⁹/L), CRP 88 mg/L. Smear: marked band forms with toxic granulation, no blasts. Acute suppurative appendicitis confirmed at surgery. Interpretation: bands >5% define a left shift, signalling acute bacterial infection or tissue necrosis and often appearing before the total count rises. Key point: With metamyelocytes or myelocytes it becomes a leukemoid reaction.",
+      "lab": "① Standardise the band/segmented rule: narrowest point >1/3 of the widest = band, ≤1/3 = segmented; check whether a chromatin filament connects the lobes. ② This judgment is subjective; inter-observer variation can reach 5%. Run periodic intra-laboratory comparisons and state the criterion used. ③ Over-staining hides the connecting filament and turns segmented nuclei into bands - restain with adjusted timing or pH. ④ Thick areas with overlapping, distorted nuclei cannot be scored; classify only in flat, non-overlapping fields. ⑤ Bands are reported within the neutrophil differential, not as a separate category. ⑥ Always give the actual band percentage rather than merely 'present' so clinicians can track the trend."
+    }
+  }
+  },
+  eosinophil:{
+  group: "peripheral",
+  size: "13–15μm",
+  nc: "核常2叶（眼镜状）",
+  ref: "占白细胞 0.4%–8%；绝对值 (0.02–0.52)×10⁹/L",
+  smearKey: "eosinophil",
+  t: {
+    "zh": {
+      "n": "嗜酸性粒细胞",
+      "d": "核常分2叶呈眼镜状；胞质充满粗大、大小一致的橘红色嗜酸性颗粒。",
+      "tags": ["双叶", "橘红粗颗粒", "眼镜核"],
+      "morph": "胞体13–15μm，略大于中性粒细胞；核多分为2叶，呈哑铃形或眼镜状，染色质浓集；胞质充满粗大（约0.5–1.0μm）、大小一致、分布均匀的圆形嗜酸性颗粒，颗粒内含主要碱性蛋白(MBP)、嗜酸性阳离子蛋白(ECP)、嗜酸性过氧化物酶。颗粒有折光性，很少覆盖核。",
+      "stain": "颗粒呈鲜艳的橘红色/橙黄色，均匀铺满整个胞质（不遮盖核），折光性强；核呈紫红色。因颗粒着色鲜明，低倍镜下即可识别。",
+      "diff": "①与嗜碱性粒细胞（最关键）：嗜酸颗粒橘红、大小一致、均匀分布、不覆盖核；嗜碱颗粒深紫蓝、大小不等、分布不均、常覆盖并遮蔽核，且易脱颗粒形成蜂窝状空隙。②与中性粒细胞：中性颗粒极细小、淡紫色、无折光性。③与嗜酸性颗粒溶解或脱颗粒的人工假象鉴别。",
+      "clin": "增多：过敏性疾病（支气管哮喘、荨麻疹、过敏性鼻炎、药物过敏）、寄生虫感染（尤其蠕虫如蛔虫、钩虫、血吸虫，蛔虫感染时常显著升高）、皮肤病（湿疹、天疱疮）、某些肿瘤（霍奇金淋巴瘤、慢性粒细胞白血病、嗜酸性粒细胞增多综合征HES）、结缔组织病、肾上腺皮质功能减退。减少：伤寒、急性应激、大剂量糖皮质激素、库欣综合征。",
+      "labels": {
+        "nucleus": "双叶核",
+        "granule": "嗜酸颗粒"
+      },
+      "labelDetail": {
+        "nucleus": "核多分为2叶，形似眼镜或哑铃，故称眼镜核；染色质浓集，通常不被颗粒覆盖而清晰可见。",
+        "granule": "颗粒粗大（0.5–1.0μm）、大小一致呈橘红色，含主要碱性蛋白(MBP)、嗜酸性阳离子蛋白(ECP)，是杀伤蠕虫与介导过敏反应的效应分子。"
+      },
+      "size": "13–15μm",
+      "nc": "核常2叶（眼镜状）",
+      "ref": "占白细胞 0.4%–8%；绝对值 (0.02–0.52)×10⁹/L",
+      "case": "男性，24岁，反复夜间喘息、鼻塞、眼痒2年，近期加重。WBC 8.9×10⁹/L，嗜酸性粒细胞 12%（绝对值 1.07×10⁹/L），血清总 IgE 升高，尘螨特异性 IgE 阳性，肺功能示可逆性气流受限。涂片：嗜酸性粒细胞胞质充满粗大橘红色颗粒，核多为双叶，未见原始细胞与异常细胞。判读：嗜酸粒细胞轻中度增多伴过敏史与特异性 IgE 阳性，符合变应性哮喘合并过敏性鼻炎。提醒：寄生虫感染（尤其蠕虫）同样可致嗜酸显著升高，甚至更高；问诊时应追问生食史、疫区旅居史，必要时加做粪便虫卵检查与寄生虫血清学。",
+      "lab": "①嗜酸颗粒橘红、折光性强，低倍镜即可识别，但须与嗜碱性粒细胞鉴别：嗜碱颗粒深紫蓝、大小不等、常覆盖并遮蔽核、易脱颗粒形成蜂窝状空隙。②嗜酸性粒细胞在涂片尾部与边缘分布偏多，分类计数须在体尾交界处进行，否则百分率虚假偏高。③外周血嗜酸粒细胞的绝对值比百分率更有临床价值（百分率受中性粒细胞增减影响），应同时报告绝对值。④嗜酸粒细胞直接计数法（计数池）用于疗效监测与昼夜节律评估，操作时应充分混匀、充池避免气泡，计数两次取均值。⑤糖皮质激素可使嗜酸粒细胞在数小时内迅速下降，采血时间应记录在报告中以便解读。⑥嗜酸颗粒易脱颗粒形成空泡，属人工假象，勿误判为细胞变性或中毒改变。"
+    },
+    "en": {
+      "n": "Eosinophil",
+      "d": "Bilobed spectacle-shaped nucleus; large uniform orange-red granules filling the cytoplasm.",
+      "tags": ["Bilobed", "Orange granules", "Spectacle nucleus"],
+      "morph": "13-15 µm; nucleus usually bilobed (spectacle/dumbbell); cytoplasm packed with large (0.5-1.0 µm) uniform refractile granules containing MBP, ECP and eosinophil peroxidase.",
+      "stain": "Bright orange-red granules fill the cytoplasm without obscuring the nucleus; nucleus purple-red.",
+      "diff": "vs basophil: eosinophil granules are orange, uniform, evenly spread and do not cover the nucleus; basophil granules are dark purple, variable in size and overlie the nucleus.",
+      "clin": "High: allergy (asthma, urticaria), parasitic infestation (especially helminths), skin disease, Hodgkin lymphoma, CML, hypereosinophilic syndrome. Low: typhoid, stress, high-dose steroids.",
+      "labels": {
+        "nucleus": "Bilobed nucleus",
+        "granule": "Eosinophilic granules"
+      },
+      "labelDetail": {
+        "nucleus": "Usually two lobes giving the classic spectacle/dumbbell shape; not obscured by granules.",
+        "granule": "Large uniform orange-red granules (0.5-1.0 µm) containing major basic protein, ECP and eosinophil peroxidase."
+      },
+      "size": "13–15 µm",
+      "nc": "Usually 2 lobes (spectacle)",
+      "ref": "0.4%–8% of WBC; absolute (0.02–0.52)×10⁹/L",
+      "case": "Man, 24, two years of nocturnal wheeze, nasal obstruction and itchy eyes, recently worse. WBC 8.9×10⁹/L, eosinophils 12% (absolute 1.07×10⁹/L), raised total IgE, positive dust-mite specific IgE, reversible airflow limitation. Smear: eosinophils packed with coarse orange-red granules, mostly bilobed nuclei, no blasts. Interpretation: mild-to-moderate eosinophilia with atopy fits allergic asthma with rhinitis. Remember that helminth infection can raise eosinophils as much or more - ask about raw-food and travel history and add stool ova/parasite serology when indicated.",
+      "lab": "① Eosinophil granules are orange and refractile and are recognised under low power, but must be distinguished from basophils: basophil granules are dark purple, unequal, overlay the nucleus and dissolve into honeycomb spaces. ② Eosinophils concentrate at the smear tail and edges; perform the differential in the body-tail junction or the percentage will be falsely high. ③ Absolute counts are more informative than percentages (which shift with the neutrophil count) - report both. ④ Direct eosinophil counting in a chamber is used for monitoring therapy and circadian variation: mix thoroughly, fill without bubbles and count twice. ⑤ Steroids suppress eosinophils within hours - record sampling time when interpreting results. ⑥ Degranulation vacuoles are an artifact, not degeneration or toxic change."
+    }
+  }
+  },
+  basophil:{
+  group: "peripheral",
+  size: "10–14μm",
+  nc: "核分叶不清，常被遮盖",
+  ref: "占白细胞 0%–1%；绝对值 (0–0.06)×10⁹/L",
+  smearKey: "basophil",
+  t: {
+    "zh": {
+      "n": "嗜碱性粒细胞",
+      "d": "外周血最少见；核分叶不清常被遮盖，胞质含大小不等的深紫蓝色嗜碱性颗粒。",
+      "tags": ["最少见", "深紫蓝颗粒", "核被遮盖"],
+      "morph": "胞体10–14μm，圆形或略不规则，是外周血中数量最少的白细胞（占0%–1%）。核分叶不清、呈模糊的块状或S形，常被颗粒完全遮盖而难以辨认。胞质内含粗大、大小不等（0.2–1.0μm）、分布不均的嗜碱性颗粒，颗粒内含肝素、组胺、嗜碱性颗粒蛋白，颗粒水溶性强。",
+      "stain": "颗粒呈深紫蓝色/紫黑色，大小不等、疏密不均，常重叠覆盖于核上，使核形难以分辨；因颗粒易溶于水，染色过程中常脱颗粒而留下不染色的空隙，形成特征性的“蜂窝样”或“筛网状”外观。",
+      "diff": "①与嗜酸性粒细胞（最关键）：嗜碱颗粒深紫蓝、大小不等、分布不均、覆盖核、易脱颗粒；嗜酸颗粒橘红、大小一致、均匀分布、不覆盖核。②与肥大细胞：形态相似但肥大细胞不出现于正常外周血，仅见于组织。③与中毒颗粒：中毒颗粒伴感染中毒表现且细胞为中性粒。",
+      "clin": "增多：慢性粒细胞白血病（嗜碱增多是CML进展与急变的重要提示）、真性红细胞增多症、原发性骨髓纤维化、骨髓增生异常综合征、过敏反应、甲状腺功能减退、慢性炎症（溃疡性结肠炎）、水痘等感染恢复期。减少一般无临床意义。与组胺释放相关的表现：荨麻疹、支气管痉挛、低血压。",
+      "labels": {
+        "nucleus": "核(被盖)",
+        "granule": "嗜碱颗粒"
+      },
+      "labelDetail": {
+        "nucleus": "核分叶不清，常被深紫蓝颗粒完全遮盖而模糊难辨，这是与嗜酸性粒细胞最直观的区别之一。",
+        "granule": "颗粒粗大、大小不等（0.2–1.0μm）、深紫蓝色、分布不均，含肝素与组胺；因水溶性强易脱颗粒，留下蜂窝状空隙。"
+      },
+      "size": "10–14μm",
+      "nc": "核分叶不清，常被遮盖",
+      "ref": "占白细胞 0%–1%；绝对值 (0–0.06)×10⁹/L",
+      "case": "男性，58岁，乏力、左上腹包块、盗汗3个月。WBC 62×10⁹/L，可见各阶段粒细胞，嗜酸性粒细胞 8%、嗜碱性粒细胞 6%，Hb 108 g/L，PLT 420×10⁹/L。涂片：嗜碱粒细胞明显增多，胞质含大小不等的深紫蓝色颗粒，核常被完全遮盖。骨髓：粒细胞系极度增生，以中晚幼粒为主，嗜酸与嗜碱粒细胞均增多。遗传学：Ph 染色体阳性，BCR-ABL1 融合基因阳性。判读：符合慢性粒细胞白血病（慢性期）。要点：嗜碱粒细胞增多是 CML 的特征性表现之一，若进行性升高需警惕加速期或急变。",
+      "lab": "①嗜碱颗粒水溶性强，瑞氏染色过程中极易脱颗粒，留下蜂窝状或筛网状空隙，制片应及时固定、染色动作轻柔，避免冲洗过久。②因颗粒溶解，嗜碱粒细胞常被误认为＂空泡细胞＂或直接漏计，须在涂片较薄、染色良好的区域仔细辨认，必要时用甲苯胺蓝等特殊染色确认。③嗜碱粒细胞数量极少（0–1%），分类 100 个常不足以发现异常，必要时计数 200–400 个，或结合仪器提供的绝对值与散点图异常提示。④不要与组织肥大细胞混淆：肥大细胞颗粒更密、核圆居中，且不出现于正常外周血，若见应提示临床排查肥大细胞增多症。⑤嗜碱粒细胞在涂片尾部与边缘相对集中，分类应在体尾交界处进行。⑥报告嗜碱粒细胞增多时应同时给出绝对值，并提示临床关注 CML 与骨髓增殖性肿瘤的可能。"
+    },
+    "en": {
+      "n": "Basophil",
+      "d": "Rarest circulating leukocyte; nucleus obscured by coarse dark purple granules of unequal size.",
+      "tags": ["Rarest", "Dark granules", "Nucleus obscured"],
+      "morph": "10-14 µm; nucleus poorly segmented and usually hidden by granules; coarse granules 0.2-1.0 µm, unequal in size, containing heparin and histamine.",
+      "stain": "Dark purple-blue granules of varying size overlying the nucleus; because they are water-soluble they often dissolve, leaving a honeycomb appearance.",
+      "diff": "vs eosinophil: basophil granules are dark purple, unequal, unevenly spread, cover the nucleus and dissolve; eosinophil granules are orange, uniform and do not cover the nucleus.",
+      "clin": "High: CML (a sign of progression/blast crisis), polycythemia vera, myelofibrosis, MDS, allergy, hypothyroidism. Low: no clinical significance.",
+      "labels": {
+        "nucleus": "Nucleus",
+        "granule": "Basophilic granules"
+      },
+      "labelDetail": {
+        "nucleus": "Poorly segmented and usually hidden beneath the granules — one of the easiest ways to tell it from an eosinophil.",
+        "granule": "Coarse dark purple granules of unequal size containing heparin and histamine; water-soluble, leaving a honeycomb pattern."
+      },
+      "size": "10–14 µm",
+      "nc": "Lobes indistinct, often hidden",
+      "ref": "0%–1% of WBC; absolute (0–0.06)×10⁹/L",
+      "case": "Man, 58, fatigue, left upper quadrant mass and night sweats for 3 months. WBC 62×10⁹/L with a full granulocytic maturation series, eosinophils 8%, basophils 6%, Hb 108 g/L, platelets 420×10⁹/L. Smear: increased basophils with coarse dark purple granules of unequal size often hiding the nucleus. Marrow: extreme granulocytic hyperplasia, mainly myelocytes and metamyelocytes, with eosinophilia and basophilia. Genetics: Philadelphia chromosome and BCR-ABL1 positive. Interpretation: chronic myeloid leukaemia, chronic phase. Key point: Rising basophil counts warn of acceleration or blast crisis.",
+      "lab": "① Basophil granules are water-soluble and dissolve during Wright staining, leaving honeycomb spaces; fix promptly, handle gently and avoid prolonged rinsing. ② Because of dissolution, basophils are mistaken for vacuolated cells or simply missed; examine thin, well-stained areas and confirm with metachromatic stains such as toluidine blue if needed. ③ Basophils are 0-1% of leukocytes: a 100-cell differential often misses an increase - count 200-400 cells, and use analyser absolute counts and scattergram flags. ④ Do not confuse them with tissue mast cells, whose granules are denser over a central round nucleus; mast cells are absent from normal blood - if seen, alert the clinician. ⑤ Basophils concentrate at the smear tail and edges; classify in the body-tail junction. ⑥ Report basophilia with an absolute count and alert clinicians to CML and other myeloproliferative neoplasms."
+    }
+  }
+  },
+  lymphocyte_small:{
+  group: "peripheral",
+  size: "6–10μm",
+  nc: "核质比极高",
+  ref: "占白细胞 20%–50%；绝对值 (1.1–3.2)×10⁹/L；4岁以内儿童可为淋巴细胞优势",
+  smearKey: "lymphocyte",
+  t: {
+    "zh": {
+      "n": "小淋巴细胞",
+      "d": "核圆、染色质粗块浓集呈深紫蓝，几乎占满胞体；胞质仅一薄层天蓝色，核质比极高。",
+      "tags": ["圆核", "深紫蓝", "天蓝薄浆"],
+      "morph": "小淋巴细胞直径6–8μm（大淋巴细胞9–15μm）。核圆或类圆、可有浅凹陷，居中或稍偏位，染色质高度浓集成粗块状，着色极深；胞质极少，仅在核周形成一圈薄薄的天蓝色环带，可含少量粗大的嗜天青颗粒。核质比高是小淋巴细胞最突出的特征。",
+      "stain": "核呈深紫蓝色（染色质浓集所致），副染色质不明显；胞质呈透明的天蓝色/淡蓝色，无颗粒或仅有数个粗大紫红色嗜天青颗粒。",
+      "diff": "①与红细胞：红细胞无核、均匀粉红、有中央淡染；淋巴细胞有深染圆核、蓝色胞质。②与原始淋巴细胞：原淋核染色质细致、可见核仁、胞体较大。③与大淋巴细胞：胞体大、胞质丰富、嗜天青颗粒多而粗。④与单核细胞：单核核不规则、染色质疏松、胞质灰蓝量多。⑤异型淋巴细胞（Downey细胞）：胞体大、胞质边缘深蓝、核染色质疏松、可见核仁样结构，>10%提示传染性单核细胞增多症。",
+      "clin": "增多：病毒感染（传染性单核细胞增多症、病毒性肝炎、风疹、腮腺炎）、结核病、百日咳、梅毒、淋巴细胞白血病（以幼稚淋巴细胞为主）、淋巴瘤白血病期、甲状腺功能亢进。减少：免疫缺陷（HIV、先天性免疫缺陷）、糖皮质激素/免疫抑制剂、放射线、化疗、系统性红斑狼疮。4岁以内儿童淋巴细胞比例高于中性粒细胞属生理现象（生后4–6天与4–6岁为两次交叉）。",
+      "labels": {
+        "nucleus": "圆核",
+        "cytoplasm": "天蓝胞质"
+      },
+      "labelDetail": {
+        "nucleus": "核圆、染色质粗块状高度浓集呈深紫蓝色，几乎占满整个细胞；与红细胞鉴别时，“有无深紫蓝圆核”是最快的判断点。",
+        "cytoplasm": "胞质极少，仅为核周一圈薄薄的天蓝色环带，可含数个粗大的紫红色嗜天青颗粒；这是高核质比小淋巴细胞的特征。"
+      },
+      "size": "6–10μm",
+      "nc": "核质比极高",
+      "ref": "占白细胞 20%–50%；绝对值 (1.1–3.2)×10⁹/L；4岁以内儿童可为淋巴细胞优势",
+      "case": "女性，19岁，发热、咽痛、颈部淋巴结肿大1周。WBC 9.8×10⁹/L，淋巴细胞 58%，其中异型淋巴细胞 16%，Hb 与 PLT 正常。涂片：异型淋巴细胞胞体增大、胞质丰富且边缘深蓝呈＂裙边样＂、核染色质疏松、可见核仁样结构；同时可见大量正常小淋巴细胞。异嗜性凝集试验阳性，EBV 抗体 IgM 阳性，肝功能轻度异常，脾脏轻度肿大。判读：异型淋巴细胞 >10% 结合临床表现，符合传染性单核细胞增多症（EBV 感染）。要点：异型淋巴细胞是反应性改变，切不可误判为白血病细胞而过度检查。",
+      "lab": "①小淋巴细胞与红细胞最易混淆，最快鉴别点是＂有无深紫蓝圆核与天蓝薄浆＂；低倍镜下红细胞成片密集、淋巴细胞散在分布，可作为辅助判断。②异型淋巴细胞（Downey Ⅰ–Ⅲ型）判读主观性较大，报告应给出百分比并结合临床；>10% 提示传染性单核细胞增多症，但确诊依赖血清学。③婴幼儿淋巴细胞比例生理性高于中性粒细胞（生后 4–6 天与 4–6 岁为两次交叉），不可误判为淋巴细胞增多症，报告时应注明年龄。④淋巴细胞在涂片尾部相对集中，分类计数须在体尾交界处进行。⑤观察核棘突、核沟、核仁样结构等细微改变时，油镜须油量充足、视野清晰，避免将染色沉渣误认为包涵体或颗粒。⑥若见原始淋巴细胞（染色质细致、核仁明显）应立即提示临床排查急性淋巴细胞白血病，并建议加做流式免疫分型。"
+    },
+    "en": {
+      "n": "Small Lymphocyte",
+      "d": "Round deeply condensed nucleus occupying almost the whole cell; a thin rim of sky-blue cytoplasm.",
+      "tags": ["Round nucleus", "Dark blue", "High N:C"],
+      "morph": "Small 6-8 µm (large 9-15 µm); round nucleus with coarsely clumped, deeply staining chromatin; scanty sky-blue cytoplasm with a few coarse azurophilic granules; very high N:C ratio.",
+      "stain": "Deep violet-blue nucleus; pale sky-blue, agranular cytoplasm.",
+      "diff": "vs RBC (no nucleus, pink, central pallor); vs lymphoblast (fine chromatin, nucleoli); vs monocyte (irregular, loose chromatin, abundant grey-blue cytoplasm); reactive/atypical lymphocytes >10% suggest infectious mononucleosis.",
+      "clin": "High: viral infection (EBV, hepatitis), tuberculosis, pertussis, lymphocytic leukemia/lymphoma. Low: immunodeficiency, steroids, chemotherapy. Lymphocytes exceed neutrophils physiologically between 4 days and 4-6 years of age.",
+      "labels": {
+        "nucleus": "Nucleus",
+        "cytoplasm": "Cytoplasm"
+      },
+      "labelDetail": {
+        "nucleus": "Round nucleus with coarsely clumped deep violet-blue chromatin filling nearly the whole cell.",
+        "cytoplasm": "Only a thin rim of sky-blue cytoplasm, sometimes with a few coarse azurophilic granules — the hallmark of a small lymphocyte."
+      },
+      "size": "6–10 µm",
+      "nc": "Very high N:C ratio",
+      "ref": "20%–50% of WBC; absolute (1.1–3.2)×10⁹/L; lymphocyte predominance is physiologic up to age 4–6",
+      "case": "Woman, 19, fever, sore throat and cervical lymphadenopathy for 1 week. WBC 9.8×10⁹/L, lymphocytes 58% including 16% atypical forms; Hb and platelets normal. Smear: enlarged atypical lymphocytes with abundant cytoplasm, deep blue skirting at the margins, loose chromatin and nucleolus-like structures, alongside many normal small lymphocytes. Heterophile agglutination positive, EBV IgM positive, mild transaminase rise, mild splenomegaly. Interpretation: atypical lymphocytes >10% with this picture fits infectious mononucleosis. Key point: These are reactive cells - never mistake them for leukaemic blasts.",
+      "lab": "① Small lymphocytes are most often confused with RBCs; the quickest discriminator is a dense violet round nucleus plus a thin sky-blue rim. Low power helps: RBCs form a confluent sheet, lymphocytes are scattered. ② Scoring atypical (Downey I-III) lymphocytes is subjective - give a percentage and interpret with the clinical picture; >10% suggests infectious mononucleosis but serology is required for diagnosis. ③ Lymphocytes physiologically exceed neutrophils between 4-6 days and 4-6 years of age; note the patient's age so this is not called lymphocytosis. ④ Lymphocytes concentrate at the smear tail; do the differential in the body-tail junction. ⑤ Use adequate immersion oil and a clean field to assess nuclear indentations and nucleolus-like structures; do not mistake stain precipitate for inclusions. ⑥ If lymphoblasts (fine chromatin, distinct nucleoli) appear, alert the clinician to possible ALL and suggest flow cytometry."
+    }
+  }
+  },
+  monocyte:{
+  group: "peripheral",
+  size: "12–20μm",
+  nc: "核肾形/脑回状，染色质疏松",
+  ref: "占白细胞 3%–10%；绝对值 (0.1–0.6)×10⁹/L",
+  smearKey: "monocyte",
+  t: {
+    "zh": {
+      "n": "单核细胞",
+      "d": "外周血最大的白细胞；核肾形/马蹄形/脑回状、染色质疏松浅染；胞质丰富灰蓝，布满尘样细颗粒，常有空泡。",
+      "tags": ["最大", "肾形核", "灰尘样颗粒"],
+      "morph": "直径12–20μm，是外周血中体积最大的白细胞。胞体常不规则、边缘可见钝圆伪足；核形态多样——肾形、马蹄形、折叠形或脑回状，染色质纤细疏松呈网状，故着色比淋巴细胞核浅；胞质极丰富，灰蓝色不透明（毛玻璃样），布满大量细小如灰尘的嗜天青颗粒，常可见空泡。进入组织后分化为巨噬细胞/树突状细胞。",
+      "stain": "核呈淡紫红色（因染色质疏松故着色较浅，这一点与淋巴细胞的深染核形成鲜明对比）；胞质呈灰蓝色至灰紫色，均匀不透明，灰尘样颗粒细密，常有大小不等的空泡。",
+      "diff": "①与淋巴细胞：单核核大而不规则、染色质疏松浅染、胞质丰富灰蓝；淋巴核圆而深染、胞质天蓝极薄。②与中性中幼粒细胞：中幼粒核圆或椭圆、染色质已开始浓集、胞质内出现特异性中性颗粒（淡紫红细小）而非尘样颗粒。③与异型淋巴细胞：异淋胞质边缘深蓝、“裙边”样、核染色质较浓。④与原始单核细胞：原单核仁明显、染色质细致、胞质灰蓝无尘样颗粒。",
+      "clin": "增多：亚急性感染性心内膜炎、结核病、伤寒恢复期、疟疾、黑热病、布鲁氏菌病、斑疹伤寒、系统性红斑狼疮、溃疡性结肠炎、急性单核细胞白血病(M5)、慢性粒单核细胞白血病(CMML)、骨髓增生异常综合征(MDS)、粒细胞缺乏恢复期、恶性肿瘤。减少一般无临床意义。单核细胞增多伴中性粒细胞减少可见于某些慢性感染与MDS。",
+      "labels": {
+        "nucleus": "肾形核",
+        "cytoplasm": "灰蓝胞质",
+        "granule": "尘样颗粒"
+      },
+      "labelDetail": {
+        "nucleus": "核呈肾形、马蹄形或脑回状，染色质纤细疏松呈网状，故染色比淋巴细胞核浅——这是与淋巴细胞鉴别的关键。",
+        "cytoplasm": "胞质极丰富、灰蓝色不透明（毛玻璃样），是外周血白细胞中胞质最多者，且常含空泡。",
+        "granule": "尘埃样细小的嗜天青颗粒密布胞质，均匀而细密，与中性粒细胞的特异性颗粒不同。"
+      },
+      "size": "12–20μm",
+      "nc": "核肾形/脑回状，染色质疏松",
+      "ref": "占白细胞 3%–10%；绝对值 (0.1–0.6)×10⁹/L",
+      "case": "男性，40岁，不规则发热、盗汗、体重下降2个月，既往心脏杂音。WBC 11.2×10⁹/L，单核细胞 15%（绝对值 1.68×10⁹/L），Hb 96 g/L，ESR 68 mm/h，PLT 正常。涂片：单核细胞胞体大、核呈肾形或折叠脑回状、染色质疏松浅染，胞质丰富灰蓝、布满尘样细颗粒，可见空泡。血培养：草绿色链球菌阳性；超声心动图：二尖瓣赘生物。判读：持续性单核细胞增多伴贫血、血沉增快与血培养阳性，符合亚急性感染性心内膜炎。要点：单核细胞持续增多是慢性肉芽肿性感染与某些慢性感染的重要线索，也可见于结核病、伤寒恢复期、疟疾与骨髓增生异常综合征。",
+      "lab": "①单核细胞体积大、胞质丰富、边缘不规则易见钝圆伪足，易被误认为中性中幼粒细胞或异型淋巴细胞；须综合核形（肾形/脑回状、染色质疏松浅染）与胞质（灰蓝不透明、尘样颗粒）判断。②与中性中幼粒细胞的核心区别：中幼粒核圆或椭圆、染色质已开始浓集、胞质内出现特异性中性颗粒（淡紫红细小）而非尘样嗜天青颗粒。③单核细胞易黏附聚集，涂片尾部与边缘分布偏多，分类计数应在体尾交界处，否则百分率虚假偏高。④单核细胞增多时应同时报告绝对值，因百分率受中性粒细胞与淋巴细胞比例变化影响。⑤EDTA 抗凝血放置过久，单核细胞可出现空泡增多与胞质边缘不规则加剧，属体外假象，勿误判为病理改变。⑥若见原始单核细胞（核仁明显、染色质细致、胞质灰蓝无尘样颗粒、可见伪足与吞噬现象），应提示临床排查急性单核细胞白血病（AML-M5）并建议流式分型。"
+    },
+    "en": {
+      "n": "Monocyte",
+      "d": "Largest circulating leukocyte; reniform/brain-like nucleus with loose chromatin; abundant grey-blue dusty cytoplasm with vacuoles.",
+      "tags": ["Largest", "Reniform nucleus", "Dust granules"],
+      "morph": "12-20 µm, the largest blood leukocyte; irregular outline with pseudopods; nucleus reniform, horseshoe or brain-like with fine lacy chromatin; abundant opaque grey-blue cytoplasm with fine dust-like azurophilic granules and vacuoles.",
+      "stain": "Nucleus stains pale violet (loose chromatin) in contrast to the dense lymphocyte nucleus; cytoplasm grey-blue, ground-glass, dusted with fine granules, often vacuolated.",
+      "diff": "vs lymphocyte (round dense nucleus, thin sky-blue rim); vs neutrophilic myelocyte (round nucleus, specific granules); vs atypical lymphocyte (deep blue skirt at the cytoplasm edge).",
+      "clin": "High: subacute endocarditis, tuberculosis, typhoid (recovery), malaria, SLE, AML-M5, CMML, MDS, granulocytopenia recovery. Low: no clinical significance.",
+      "labels": {
+        "nucleus": "Nucleus",
+        "cytoplasm": "Cytoplasm",
+        "granule": "Granules"
+      },
+      "labelDetail": {
+        "nucleus": "Reniform, horseshoe or brain-like with fine lacy chromatin, staining paler than a lymphocyte nucleus.",
+        "cytoplasm": "Abundant opaque grey-blue (ground-glass) cytoplasm, the most voluminous of all blood leukocytes, often vacuolated.",
+        "granule": "Numerous fine dust-like azurophilic granules spread evenly through the cytoplasm."
+      },
+      "size": "12–20 µm",
+      "nc": "Reniform/brain-like, loose chromatin",
+      "ref": "3%–10% of WBC; absolute (0.1–0.6)×10⁹/L",
+      "case": "Man, 40, irregular fever, night sweats and weight loss for 2 months with a known heart murmur. WBC 11.2×10⁹/L, monocytes 15% (absolute 1.68×10⁹/L), Hb 96 g/L, ESR 68 mm/h, platelets normal. Smear: large monocytes with reniform or folded brain-like nuclei, loose pale chromatin, abundant grey-blue cytoplasm with fine dust-like granules and vacuoles. Blood cultures grow viridans streptococci; echocardiography shows a mitral vegetation. Interpretation: persistent monocytosis with anaemia, high ESR and positive cultures fits subacute infective endocarditis. Key point: Persistent monocytosis also occurs in tuberculosis, typhoid convalescence, malaria and MDS.",
+      "lab": "① Monocytes are large with abundant cytoplasm, irregular borders and blunt pseudopods, and are easily mistaken for neutrophilic myelocytes or atypical lymphocytes; judge by the reniform/brain-like nucleus with loose pale chromatin and grey-blue opaque cytoplasm bearing dust-like granules. ② The key distinction from a neutrophilic myelocyte: the myelocyte nucleus is round or oval, chromatin is beginning to condense, and specific fine lilac granules - not dust-like azurophilic granules - are present. ③ Monocytes adhere and cluster at the tail and edges; count in the body-tail junction or the percentage will be falsely high. ④ Report the absolute count as well, since the percentage shifts with other lineages. ⑤ Prolonged EDTA storage increases monocyte vacuolation and membrane irregularity - an in-vitro artifact, not pathology. ⑥ Monoblasts (prominent nucleoli, fine chromatin, grey-blue cytoplasm without dust-like granules, pseudopods, phagocytosis) warrant alerting the clinician to AML-M5 and suggesting flow cytometry."
+    }
+  }
+  },
+  pronormoblast:{
+  group: "marrow",
+  size: "15–25μm",
+  nc: "核占4/5，核仁1–3个",
+  ref: "正常骨髓 <1%（约0.2%–0.6%）；外周血不应出现",
+  smearKey: "pronormoblast",
+  t: {
+    "zh": {
+      "n": "原始红细胞",
+      "d": "红系最幼稚阶段；核大居中、染色质细颗粒状、核仁1–3个；胞质少而深蓝，呈油画感，无颗粒。",
+      "tags": ["核大", "核仁1–3", "深蓝油画感"],
+      "morph": "胞体15–25μm，圆或椭圆形，是红系最幼稚的阶段。核大、圆形，居中或稍偏位，约占胞体4/5，染色质呈细致颗粒状、分布均匀呈细网状，核膜清晰，可见1–3个（多1–2个）淡蓝色核仁；胞质极少，深蓝色、浓厚不透明如油画颜料，无颗粒，边缘常有不规则的瘤状突起，核周可见一浅淡染区（高尔基体区）。",
+      "stain": "胞质呈深而浓厚的蓝色（强嗜碱性，因含大量核糖体RNA而尚无血红蛋白），完全无颗粒；核染色质细致呈淡紫红色，核仁淡蓝色清晰可见。",
+      "diff": "①与原始粒细胞：原粒核染色质更细薄、核仁更多（2–5个）、胞质天蓝色较透亮清淡。②与原始淋巴细胞：原淋胞体小(10–18μm)、核仁少（1–2个）、胞质天蓝色薄且均匀。③与原始单核细胞：原单胞体大、核常折叠扭曲、胞质灰蓝而非深蓝。④与原始巨核细胞：原巨核胞体巨大、核多倍体、胞质有血小板样突起。⑤关键：红系原始细胞胞质深蓝油画感、边缘瘤状突起，是红系特征。",
+      "clin": "正常骨髓<1%（0.2%–0.6%），外周血不应出现。显著增多：红白血病（AML-M6a，红系>50%且原始红细胞增多）、巨幼细胞贫血、溶血性贫血危象、骨髓增生异常综合征、缺铁性贫血治疗反应期。出现于外周血即为病理，提示骨髓屏障破坏或髓外造血。",
+      "labels": {
+        "nucleus": "核/核仁",
+        "cytoplasm": "深蓝胞质"
+      },
+      "labelDetail": {
+        "nucleus": "核大占胞体4/5，染色质细致颗粒状，核膜清晰，可见1–3个淡蓝色核仁——核仁数是与原始粒细胞（2–5个）鉴别的要点之一。",
+        "cytoplasm": "胞质少而深蓝浓厚，无颗粒，如油画颜料般不透明，边缘常有瘤状突起；核周淡染区代表高尔基体所在。"
+      },
+      "size": "15–25μm",
+      "nc": "核占4/5，核仁1–3个",
+      "ref": "正常骨髓 <1%（约0.2%–0.6%）；外周血不应出现",
+      "case": "女性，62岁，面色苍白、乏力加重2个月伴体重下降。Hb 68 g/L，MCV 108 fL，WBC 3.2×10⁹/L，PLT 92×10⁹/L，血清叶酸降低、维生素B12正常，内因子抗体阴性。骨髓：红系增生明显活跃，占有核细胞 62%，原始红细胞 8%，可见巨幼样变、核碎裂与多核红系细胞，粒系可见巨晚幼粒细胞。判读：巨幼细胞性贫血（叶酸缺乏）。要点：原始红细胞比例增高需与红白血病鉴别——本例伴典型巨幼样变、无 Auer 小体与粒系原始细胞增多，且叶酸治疗后幼稚红系迅速下降，支持营养性巨幼细胞性贫血。",
+      "lab": "①骨髓穿刺抽吸量不宜超过 0.2 mL，抽吸过多会被外周血稀释，导致幼稚细胞比例失真、红系比例假性偏低；常用部位为髂后上棘或髂前上棘。②骨髓涂片应优先选择含骨髓小粒的区域镜检，小粒处细胞密集、幼稚细胞集中，比例更接近真实。③原始红细胞与原始粒细胞鉴别：原红胞质深蓝不透明如油画、边缘常有瘤状突起、核仁 1–3 个；原粒胞质天蓝较透亮、核仁 2–5 个。形态难以确定时应加做细胞化学染色（原红 PAS 可呈块状阳性，POX 阴性）。④红系比例须在分类 500 个有核细胞后才计算，计数过少误差大。⑤涂片制备后须立即挥干，否则细胞皱缩、核染色质模糊，直接影响核仁有无与染色质细致程度的判读。⑥外周血出现原始红细胞即为病理表现，应主动报告并提示临床排查红白血病、骨髓浸润与髓外造血。"
+    },
+    "en": {
+      "n": "Pronormoblast",
+      "d": "Most immature erythroid cell; large nucleus with 1-3 nucleoli; scanty deep blue agranular cytoplasm.",
+      "tags": ["Large nucleus", "Nucleoli", "Deep blue"],
+      "morph": "15-25 µm; large central nucleus occupying ~4/5 of the cell with fine granular chromatin and 1-3 pale blue nucleoli; scanty opaque deep blue cytoplasm with knob-like blebs and a perinuclear halo.",
+      "stain": "Cytoplasm stains intense opaque blue (heavy RNA, no hemoglobin); nucleus pale violet with fine chromatin.",
+      "diff": "vs myeloblast (2-5 nucleoli, lighter sky-blue cytoplasm); vs lymphoblast (smaller, 1-2 nucleoli); vs monoblast (folded nucleus, grey-blue). Deep blue 'oil-paint' cytoplasm with blebs = erythroid.",
+      "clin": "Normal marrow <1%; should not appear in blood. Increased: erythroleukemia (AML-M6a), megaloblastic anemia, hemolytic crisis, MDS.",
+      "labels": {
+        "nucleus": "Nucleus",
+        "cytoplasm": "Cytoplasm"
+      },
+      "labelDetail": {
+        "nucleus": "Large nucleus ~4/5 of the cell with fine chromatin and 1-3 nucleoli (myeloblasts have 2-5).",
+        "cytoplasm": "Scanty, opaque deep blue, agranular, with knob-like surface blebs and a pale perinuclear Golgi zone."
+      },
+      "size": "15–25 µm",
+      "nc": "Nucleus 4/5, 1–3 nucleoli",
+      "ref": "Normal marrow <1% (about 0.2%–0.6%); absent from blood",
+      "case": "Woman, 62, increasing pallor and fatigue with weight loss for 2 months. Hb 68 g/L, MCV 108 fL, WBC 3.2×10⁹/L, platelets 92×10⁹/L; low serum folate with normal B12 and negative intrinsic-factor antibody. Marrow: marked erythroid hyperplasia (62% of nucleated cells), 8% pronormoblasts, megaloblastoid change, karyorrhexis and multinucleated erythroid cells; giant metamyelocytes in the granulocytic series. Interpretation: megaloblastic anaemia from folate deficiency. Key point: Pronormoblast excess must be distinguished from erythroleukaemia - megaloblastoid change without Auer rods or granulocytic blasts, plus rapid correction after folate, supports a nutritional cause.",
+      "lab": "① Aspirate no more than 0.2 mL of marrow; larger volumes are diluted with peripheral blood and falsely lower the blast and erythroid fractions. Use the posterior (or anterior) iliac crest. ② Examine areas containing marrow particles first: cells are denser there and the immature fraction is more representative. ③ Pronormoblast vs myeloblast: the pronormoblast has opaque deep blue 'oil-paint' cytoplasm, often with knob-like blebs and 1-3 nucleoli; the myeloblast has clearer sky-blue cytoplasm and 2-5 nucleoli. When morphology is equivocal add cytochemistry (PAS block positivity, POX negative in erythroid). ④ Calculate erythroid percentages only after classifying 500 nucleated cells. ⑤ Dry the film immediately; crenated cells with blurred chromatin make nucleoli unreadable. ⑥ Pronormoblasts in blood are always pathologic - report them and prompt a search for erythroleukaemia, marrow infiltration or extramedullary haematopoiesis."
+    }
+  }
+  },
+  basophilic_normoblast:{
+  group: "marrow",
+  size: "10–18μm",
+  nc: "核>3/4，核仁消失",
+  ref: "正常骨髓 1%–5%",
+  smearKey: "basophilic_normoblast",
+  t: {
+    "zh": {
+      "n": "早幼红细胞",
+      "d": "核圆占胞体3/4以上，染色质开始粗颗粒状浓集，核仁消失或模糊；胞质仍深蓝不透明，无血红蛋白。",
+      "tags": ["核仁消失", "染色质变粗", "深蓝无颗粒"],
+      "morph": "胞体10–18μm，圆或类圆形，较原始红细胞略小。核圆、居中或稍偏，仍占胞体3/4以上，染色质由细颗粒开始浓集成粗颗粒状或小块状（但尚不成块索），核仁消失或仅留模糊痕迹；胞质量略增多但仍少，深蓝色、不透明，依然无颗粒，无血红蛋白故无红色成分，边缘瘤状突起减少。",
+      "stain": "胞质仍为深蓝色（强嗜碱性），但比原始红细胞略淡；核紫红色，染色质粗颗粒状，核仁消失。",
+      "diff": "①与原始红细胞：核仁消失、染色质由细变粗是最核心的区分点。②与中幼红细胞：中幼红细胞胞质已出现红色（嗜多色性），早幼仍纯蓝。③与原始粒细胞/淋巴细胞：胞质深蓝不透明白带油画感，且核仁已消失。",
+      "clin": "正常骨髓占1%–5%。增多见于各种增生性贫血（缺铁性贫血、溶血性贫血、巨幼细胞性贫血）的红系增生反应、红白血病（AML-M6）、真性红细胞增多症、骨髓增生异常综合征。外周血出现提示骨髓屏障受损。",
+      "labels": {
+        "nucleus": "核",
+        "cytoplasm": "深蓝胞质"
+      },
+      "labelDetail": {
+        "nucleus": "核圆、占胞体3/4以上，染色质开始由细颗粒浓集成粗颗粒/小块状，核仁消失——与原始红细胞的核心区别在于核仁消失与染色质变粗。",
+        "cytoplasm": "胞质仍为深蓝、不透明、无颗粒，无血红蛋白故无红色；比原始红细胞略淡、量略多。"
+      },
+      "size": "10–18μm",
+      "nc": "核>3/4，核仁消失",
+      "ref": "正常骨髓 1%–5%",
+      "case": "男性，5岁，面色苍黄、生长发育迟缓，家族中有类似患者。Hb 72 g/L，MCV 65 fL，RDW 22%，血清铁与铁蛋白正常。血红蛋白电泳：HbA2 6.5%，HbF 18%。骨髓：红系增生极度活跃，早幼与中幼红细胞比例增高，成熟红细胞可见靶形、泪滴形与嗜多色性大红细胞。判读：中间型β地中海贫血。要点：红系代偿性增生但存在无效造血，骨髓各阶段幼稚红系比例均增高，且外周血同时出现靶形红细胞与嗜多色性大红细胞——骨髓与外周血形态互相印证是诊断思路。",
+      "lab": "①早幼红细胞与原始红细胞的界线是核仁消失、染色质变粗，判读须油镜高倍确认核仁是否真的存在；染色过深时核仁被掩盖，易误判为更成熟阶段。②与中幼红细胞的界线是胞质是否出现红色（灰紫）：纯蓝即为早幼，出现灰紫色即已进入中幼。③骨髓涂片染色不宜过深，否则深蓝胞质与紫红核对比度下降，核仁与染色质细节均难辨认，直接影响分阶段判读。④红系各阶段比例应连续观察多个视野后综合，单视野易受细胞分布不均影响。⑤分类计数时应排除破碎细胞与裸核，避免各阶段比例失真。⑥报告红系增生程度与阶段比例时，应注明有核细胞分类总数与计数方法，便于复查对比。"
+    },
+    "en": {
+      "n": "Early Normoblast",
+      "d": "Round nucleus >3/4 of the cell with coarsening chromatin and no nucleolus; still deep blue, agranular.",
+      "tags": ["No nucleolus", "Coarse chromatin", "Deep blue"],
+      "morph": "10-18 µm; round nucleus still >3/4 of the cell, chromatin coarsening into granules and small clumps, nucleolus gone; scanty deep blue opaque agranular cytoplasm.",
+      "stain": "Cytoplasm still deep blue but slightly lighter than the pronormoblast; nucleus purple-red with coarse granular chromatin.",
+      "diff": "vs pronormoblast: nucleolus disappears and chromatin coarsens. vs polychromatic normoblast: no red tint in the cytoplasm yet.",
+      "clin": "Normal marrow 1-5%; increased in hyperplastic anemias (iron deficiency, hemolysis, megaloblastic), erythroleukemia, polycythemia vera, MDS.",
+      "labels": {
+        "nucleus": "Nucleus",
+        "cytoplasm": "Cytoplasm"
+      },
+      "labelDetail": {
+        "nucleus": "Round, >3/4 of the cell, chromatin coarsening, nucleolus lost — the key difference from a pronormoblast.",
+        "cytoplasm": "Still deep blue, opaque and agranular with no hemoglobin (no red tint); slightly more abundant than in the pronormoblast."
+      },
+      "size": "10–18 µm",
+      "nc": "Nucleus >3/4, no nucleolus",
+      "ref": "Normal marrow 1%–5%",
+      "case": "Boy, 5, sallow complexion and growth retardation with a positive family history. Hb 72 g/L, MCV 65 fL, RDW 22%; serum iron and ferritin normal. Haemoglobin electrophoresis: HbA2 6.5%, HbF 18%. Marrow: extreme erythroid hyperplasia with increased early and polychromatic normoblasts; peripheral smear shows target cells, teardrop cells and polychromatic macrocytes. Interpretation: beta-thalassaemia intermedia. Key point: Erythroid hyperplasia is compensatory but ineffective - every immature erythroid stage rises, and target cells in blood corroborate the marrow picture.",
+      "lab": "① The boundary with the pronormoblast is loss of the nucleolus and coarser chromatin; confirm nucleoli under oil at high magnification - overstaining hides them and makes the cell look more mature. ② The boundary with the polychromatic normoblast is the appearance of red (grey-mauve) in the cytoplasm: pure blue means early, grey-mauve means polychromatic. ③ Do not overstain marrow films: contrast between the deep blue cytoplasm and purple-red nucleus falls and both nucleoli and chromatin detail are lost. ④ Survey several consecutive fields before assigning stage percentages; a single field is subject to uneven distribution. ⑤ Exclude broken cells and bare nuclei when counting, or the stage distribution is distorted. ⑥ When reporting erythroid hyperplasia and stage distribution, state how many nucleated cells were classified and by what method."
+    }
+  }
+  },
+  polychromatic_normoblast:{
+  group: "marrow",
+  size: "8–15μm",
+  nc: "核约占1/2，块索状",
+  ref: "正常骨髓 约10%（5%–15%）",
+  smearKey: "polychromatic_normoblast",
+  t: {
+    "zh": {
+      "n": "中幼红细胞",
+      "d": "核约占胞体1/2，染色质浓集成块索状（车轮状）；胞质开始合成血红蛋白，呈灰紫/灰粉色的嗜多色性。",
+      "tags": ["核占1/2", "块索染色质", "嗜多色性"],
+      "morph": "胞体8–15μm，圆形；核圆，约占胞体1/2（这是与晚幼红细胞的分界：核<1/2即进入晚幼），染色质高度浓集成块索状，块与块之间副染色质明显，形如打碎的墨块或车轮状，核仁完全消失；胞质量明显增多，因血红蛋白开始合成而出现红色成分。",
+      "stain": "胞质呈典型的嗜多色性（polychromatophilic）——残留RNA的嗜碱性呈蓝色 + 新合成血红蛋白的嗜酸性呈红色，两者混合后呈灰紫色、灰粉色或蓝灰色，是瑞氏染色最具特征性的阶段，也是外周血中网织红细胞的对应形态。",
+      "diff": "①与早幼红细胞：胞质出现红色（灰紫）成分即为中幼。②与晚幼红细胞：核仍占约1/2且染色质尚未完全固缩；晚幼核<1/2、呈致密紫黑团块、胞质基本红色。③与淋巴细胞：淋巴核染色质均匀致密、胞质纯蓝且核浆界限分明，中幼红为块索状核+嗜多色胞质。",
+      "clin": "正常骨髓约10%（5%–15%）。增多：各种增生性贫血，尤其溶血性贫血（红系代偿性增生）、缺铁性贫血治疗反应期（铁剂后中晚幼红增多）、巨幼细胞性贫血、真性红细胞增多症、红白血病。外周血出现提示骨髓屏障破坏、溶血危象或髓外造血。",
+      "labels": {
+        "nucleus": "块索核",
+        "cytoplasm": "嗜多色胞质"
+      },
+      "labelDetail": {
+        "nucleus": "核约占胞体1/2（<1/2即进入晚幼），染色质浓集成块索状，副染色质明显，形如打碎的墨块或车轮状，核仁消失。",
+        "cytoplasm": "嗜多色性胞质：残留RNA的蓝色 + 新合成血红蛋白的红色混合成灰紫/灰粉色，是瑞氏染色下的特征表现，对应外周血的网织红细胞。"
+      },
+      "size": "8–15μm",
+      "nc": "核约占1/2，块索状",
+      "ref": "正常骨髓 约10%（5%–15%）",
+      "case": "女性，30岁，皮肤黏膜苍白、活动后心悸，严格素食8年。Hb 79 g/L，MCV 112 fL，血清维生素B12 98 pmol/L（降低），内因子抗体阳性，血清甲基丙二酸升高。骨髓：红系增生明显活跃，中幼红细胞比例增高，可见巨幼样变与核质发育不平衡（核幼浆老）、多核与核碎裂，粒系可见巨晚幼粒细胞与核右移。判读：恶性贫血（自身免疫性胃炎导致维生素B12缺乏）。要点：中幼红细胞增多是红系代偿增生的中间环节，巨幼样变与核质发育不平衡是其典型形态；补充B12后幼稚红系形态可在数日内迅速转为正常。",
+      "lab": "①嗜多色性胞质的判断受染色 pH 影响极大：偏酸时胞质偏红易误判为晚幼红细胞，偏碱时偏蓝易误判为早幼红细胞，须保证染液 pH 6.4–6.8 并用缓冲液配制。②中幼与晚幼红细胞的界线是核占比：核约占胞体 1/2 为中幼，<1/2 且完全固缩紫黑为晚幼，应在油镜下仔细判定而非凭印象。③外周血中的嗜多色性大红细胞即对应骨髓的中幼红细胞与网织红细胞阶段，报告时宜同时描述，二者互相印证更有说服力。④巨幼样变细胞应单独记录与描述，不要混入正常中幼红细胞计数，否则掩盖诊断线索。⑤涂片须薄而均匀，过厚处细胞重叠导致核浆比例无法判断，直接影响分期。⑥维生素B12或叶酸缺乏治疗后形态迅速转变，治疗前后涂片对比是验证判读的最好方法。"
+    },
+    "en": {
+      "n": "Polychromatic Normoblast",
+      "d": "Nucleus about half the cell with clumped cord-like chromatin; cytoplasm turns polychromatic (grey-mauve) as hemoglobin appears.",
+      "tags": ["Nucleus 1/2", "Clumped chromatin", "Polychromatic"],
+      "morph": "8-15 µm; round nucleus about half the cell (below half = orthochromatic); chromatin condensed into cords and clumps with clear parachromatin; cytoplasm increased and acquiring red hemoglobin.",
+      "stain": "Classic polychromatophilia: residual basophilic RNA blue mixed with newly made eosinophilic hemoglobin gives a grey-mauve or pinkish-grey cytoplasm — the same cell that circulates as a reticulocyte.",
+      "diff": "vs early normoblast (red tint now present); vs orthochromatic normoblast (nucleus <1/2, pyknotic, cytoplasm nearly fully red); vs lymphocyte (uniform dense chromatin, pure blue cytoplasm).",
+      "clin": "Normal marrow ~10%; increased in hyperplastic anemias, especially hemolysis, iron/folate/B12 therapy response, polycythemia vera, erythroleukemia. In blood it implies a broken marrow barrier.",
+      "labels": {
+        "nucleus": "Nucleus",
+        "cytoplasm": "Cytoplasm"
+      },
+      "labelDetail": {
+        "nucleus": "About half the cell area; chromatin condensed into cords and clumps with clear parachromatin; nucleolus gone.",
+        "cytoplasm": "Polychromatic grey-mauve: blue residual RNA plus red new hemoglobin — the marrow counterpart of the circulating reticulocyte."
+      },
+      "size": "8–15 µm",
+      "nc": "Nucleus ~1/2, cord-like chromatin",
+      "ref": "Normal marrow about 10% (5%–15%)",
+      "case": "Woman, 30, pallor and exertional palpitations, strict vegan diet for 8 years. Hb 79 g/L, MCV 112 fL, vitamin B12 98 pmol/L (low), intrinsic-factor antibody positive, raised methylmalonic acid. Marrow: marked erythroid hyperplasia with increased polychromatic normoblasts, megaloblastoid change, nuclear-cytoplasmic asynchrony (immature nucleus, mature cytoplasm), multinuclearity and karyorrhexis; giant metamyelocytes and right shift in the granulocytic series. Interpretation: pernicious anaemia from autoimmune gastritis. Key point: The polychromatic normoblast is the midpoint of compensatory erythroid hyperplasia; megaloblastoid change and asynchrony are typical and revert within days of B12 replacement.",
+      "lab": "① Judging polychromatophilia is highly pH-dependent: an acidic stain reddens the cytoplasm (looks orthochromatic), an alkaline stain blues it (looks early). Keep the stain at pH 6.4-6.8 with buffer. ② The polychromatic/orthochromatic boundary is nuclear size: about half the cell means polychromatic; under half with full pyknosis means orthochromatic. Decide under oil, not by impression. ③ Polychromatic macrocytes in blood are the same cells as marrow polychromatic normoblasts and blood reticulocytes - describe them together for mutual corroboration. ④ Record megaloblastoid cells separately; do not fold them into the normal polychromatic count or the clue is lost. ⑤ Films must be thin and even; overlapping cells in thick areas make the nuclear-cytoplasmic ratio unreadable. ⑥ Morphology reverts within days of B12 or folate replacement - comparing pre- and post-treatment films is the best check on your reading."
+    }
+  }
+  },
+  orthochromatic_normoblast:{
+  group: "marrow",
+  size: "7–10μm",
+  nc: "核<1/2，固缩紫黑",
+  ref: "正常骨髓 5%–10%；外周血不应出现",
+  smearKey: "orthochromatic_normoblast",
+  t: {
+    "zh": {
+      "n": "晚幼红细胞",
+      "d": "核占胞体<1/2并高度固缩成致密紫黑色团块；胞质已接近成熟红细胞，呈浅红/粉红色。",
+      "tags": ["核<1/2", "固缩核", "浅红胞质"],
+      "morph": "胞体7–10μm，圆形；核圆或已碎裂成不规则小块，占胞体<1/2，染色质完全固缩成致密、均一的紫黑色团块（固缩核/pyknotic nucleus），结构已无法辨认，无核仁；胞质与成熟红细胞几乎相同，呈浅红/粉红色。此后数小时内核被排出即成为网织红细胞。",
+      "stain": "核呈深紫黑色均一致密的团块（因染色质彻底固缩）；胞质浅红色（嗜酸性），可残留极少量蓝色，与成熟红细胞几无差别。",
+      "diff": "①与中幼红细胞：晚幼核<1/2、完全固缩紫黑、胞质基本红色；中幼核约1/2、块索状、胞质灰紫嗜多色。②与淋巴细胞：淋巴核染色质均匀致密但胞质天蓝、核浆界限清楚、核不固缩到紫黑程度；晚幼红胞质红色。③与红细胞：晚幼仍可见紫黑固缩核。",
+      "clin": "正常骨髓5%–10%，外周血不应出现。外周血出现晚幼红细胞提示：溶血性贫血（最常见，红系加速释放）、骨髓纤维化（髓外造血）、急性白血病与骨髓转移癌（骨髓屏障破坏）、严重缺氧、新生儿（生后1周内可见，属生理）。大量出现伴白细胞异常需警惕骨髓病性贫血或类白血病反应。",
+      "labels": {
+        "nucleus": "致密核",
+        "cytoplasm": "浅红胞质"
+      },
+      "labelDetail": {
+        "nucleus": "核占胞体<1/2，染色质彻底固缩成均一致密的紫黑色团块，结构无法辨认——这是与中幼红细胞（块索状核、占1/2）的分界标准。",
+        "cytoplasm": "胞质已几乎与成熟红细胞相同，呈浅红/粉红色，仅残留极少量蓝色；随后核被排出即成网织红细胞。"
+      },
+      "size": "7–10μm",
+      "nc": "核<1/2，固缩紫黑",
+      "ref": "正常骨髓 5%–10%；外周血不应出现",
+      "case": "男性，出生2天，黄疸迅速加重。Hb 128 g/L，网织红细胞 8%，总胆红素 285 μmol/L（间接胆红素为主），直接抗人球蛋白试验阳性；母亲 O 型、患儿 A 型。外周血涂片：可见晚幼红细胞 12 个/100 个白细胞，红细胞大小不一，球形红细胞易见，嗜多色性大红细胞增多，可见少量红细胞碎片。判读：ABO 血型不合新生儿溶血病。要点：晚幼红细胞出现于外周血是红系加速释放的直接证据；但新生儿出生 1 周内可见少量有核红细胞属生理现象，须结合日龄、胆红素水平与溶血指标综合判断。",
+      "lab": "①新生儿出生后 1 周内外周血可见少量有核红细胞属生理现象，超出此范围或数量显著增多才提示病理，报告时必须注明患儿日龄。②外周血出现有核红细胞时，白细胞计数会被血细胞分析仪误计入，必须手工校正：校正 WBC = 测得 WBC × 100 ÷ (100 + 每 100 个白细胞所对应的有核红细胞数)。③晚幼红细胞的固缩核易被误认为淋巴细胞或血小板团块，鉴别要点是胞质呈红色（淋巴细胞胞质为天蓝色）、核为均一致密的紫黑色团块。④骨髓中晚幼红与中幼红细胞的比例反映红系成熟度，骨髓增生异常综合征时可见成熟障碍（晚幼红比例相对减少）。⑤有核红细胞在涂片尾部相对集中，计数应注明取材部位与方法，避免不同次报告无法比较。⑥报告有核红细胞时应同时说明计数时所分类的白细胞总数（如每 100 个白细胞中有核红细胞数），这是公认的标准化表达。"
+    },
+    "en": {
+      "n": "Orthochromatic Normoblast",
+      "d": "Nucleus <1/2 of the cell, fully pyknotic and purple-black; cytoplasm now pale red, nearly like a mature RBC.",
+      "tags": ["Nucleus <1/2", "Pyknotic", "Pale red"],
+      "morph": "7-10 µm; small round or fragmented nucleus <1/2 of the cell with completely condensed homogeneous purple-black chromatin; cytoplasm essentially identical to a mature RBC. The nucleus is extruded within hours to form a reticulocyte.",
+      "stain": "Nucleus a dense uniform purple-black mass; cytoplasm pale pink-red with at most a faint blue tint.",
+      "diff": "vs polychromatic normoblast (nucleus ~1/2, cord-like chromatin, grey-mauve cytoplasm); vs lymphocyte (blue cytoplasm, chromatin not pyknotic); vs RBC (nucleus still present).",
+      "clin": "Normal marrow 5-10%; absent from blood. In blood it indicates hemolysis, myelofibrosis (extramedullary hematopoiesis), marrow infiltration/leukemia, severe hypoxia; physiologic in the first week of life.",
+      "labels": {
+        "nucleus": "Nucleus",
+        "cytoplasm": "Cytoplasm"
+      },
+      "labelDetail": {
+        "nucleus": "<1/2 of the cell, completely condensed into a homogeneous purple-black pyknotic mass — the dividing line from the polychromatic stage.",
+        "cytoplasm": "Pale pink-red, virtually identical to a mature RBC; the nucleus is extruded within hours to yield a reticulocyte."
+      },
+      "size": "7–10 µm",
+      "nc": "Nucleus <1/2, pyknotic",
+      "ref": "Normal marrow 5%–10%; absent from blood",
+      "case": "Male infant, day 2, rapidly worsening jaundice. Hb 128 g/L, reticulocytes 8%, total bilirubin 285 µmol/L (mainly unconjugated), positive direct antiglobulin test; mother group O, infant group A. Blood film: 12 orthochromatic normoblasts per 100 leucocytes, anisocytosis, readily visible spherocytes, increased polychromatic macrocytes, a few red-cell fragments. Interpretation: ABO incompatibility haemolytic disease of the newborn. Key point: Nucleated red cells in blood are direct evidence of accelerated erythroid release, but a few are physiological during the first week of life - interpret them with the infant's age, bilirubin level and haemolytic markers.",
+      "lab": "① A few nucleated red cells are physiological during the first week of life; only larger numbers or persistence beyond that are pathologic - always state the infant's age in days. ② Nucleated red cells are counted as leucocytes by automated analysers, so correct the WBC manually: corrected WBC = measured WBC × 100 ÷ (100 + NRBC per 100 leucocytes). ③ The pyknotic nucleus of an orthochromatic normoblast mimics a lymphocyte or a platelet clump; the discriminators are the red cytoplasm (lymphocytes are sky-blue) and the homogeneous purple-black nuclear mass. ④ The orthochromatic-to-polychromatic ratio in marrow reflects erythroid maturation; maturation arrest (relatively fewer orthochromatic forms) is seen in MDS. ⑤ Nucleated red cells concentrate at the smear tail - record where and how you counted so reports can be compared over time. ⑥ Report counts as NRBC per 100 leucocytes, stating the number of leucocytes actually classified - the accepted standard format."
+    }
+  }
+  },
+  megakaryocyte:{
+  group: "marrow",
+  size: "30–100μm",
+  nc: "多倍体多叶核 8N–64N",
+  ref: "正常骨髓每张涂片 7–35 个（以8N–32N为主，可达64N）",
+  smearKey: "megakaryocyte",
+  t: {
+    "zh": {
+      "n": "巨核细胞",
+      "d": "骨髓中最大的造血细胞（30–100μm）；核巨大、多倍体、多叶重叠如葡萄串；胞质极丰富淡蓝紫，边缘分隔脱落形成血小板。",
+      "tags": ["巨大", "多倍体多叶核", "产血小板"],
+      "morph": "骨髓中体积最大的造血细胞，直径30–100μm（成熟型可达100μm以上），涂片中常位于片尾与边缘。胞体巨大、形态不规则，边界常不清晰，胞质极丰富；核巨大、高度多倍体（经核内有丝分裂形成，DNA含量8N–64N，常见16N–32N），多叶重叠呈分叶状或葡萄串状，叶与叶相连属同一核；胞质周边可见分隔成小块的血小板生成区，成熟巨核细胞以胞质分隔脱落方式释放血小板（每个巨核细胞约产生1000–3000个血小板）。",
+      "stain": "胞质淡蓝紫色/淡粉蓝色，含大量细小紫红色颗粒，常聚集成簇分布于胞质周边；核紫红色，染色质呈粗条索状，着色较深。成熟巨核细胞胞质颗粒丰富、血小板形成明显；幼稚型（原巨核/幼巨核）胞质少、嗜碱性强、核叶少。",
+      "diff": "①与破骨细胞：破骨细胞含多个彼此完全分离的独立核（每个核有核仁）、胞质含空泡、体积更大且常位于骨小梁旁；巨核细胞的核叶相连为单一核。②与多核巨细胞（如朗汉斯巨细胞）：核排列于周边呈马蹄形，非多倍体。③与转移癌细胞：癌细胞核大小形态不一、核仁巨大、无血小板生成。④小巨核细胞（<20μm、单核或小核）：高度提示MDS。",
+      "clin": "增多：特发性血小板减少性紫癜（ITP，伴成熟障碍与血小板生成减少）、慢性粒细胞白血病、真性红细胞增多症、原发性血小板增多症、骨髓纤维化早期、出血后反应。减少或缺失：再生障碍性贫血、急性白血病、骨髓纤维化晚期、化疗后。形态异常：小巨核细胞、单圆核/多小核巨核细胞是MDS与AML的重要形态学依据；ITP的典型表现为巨核细胞数量增多但产板型减少。",
+      "labels": {
+        "nucleus": "多倍体核",
+        "cytoplasm": "丰富胞质"
+      },
+      "labelDetail": {
+        "nucleus": "核经核内有丝分裂形成多倍体（8N–64N，常见16N–32N），多叶重叠相连为单一核，如葡萄串状——核叶相连这一点可与破骨细胞的多个独立核鉴别。",
+        "cytoplasm": "胞质极丰富、淡蓝紫，含成簇细小紫红颗粒；周边分隔成小块并脱落即为血小板生成区，每个巨核细胞约产1000–3000个血小板。"
+      },
+      "size": "30–100μm",
+      "nc": "多倍体多叶核 8N–64N",
+      "ref": "正常骨髓每张涂片 7–35 个（以8N–32N为主，可达64N）",
+      "case": "男性，56岁，体检发现血小板持续升高3个月，无出血或血栓史。PLT 786×10⁹/L，WBC 11.8×10⁹/L，Hb 152 g/L，血清铁蛋白与 CRP 正常。骨髓：巨核细胞显著增生，呈大片状聚集，多为成熟型，胞质丰富、血小板生成活跃，可见巨大巨核细胞与裸核；粒系与红系无明显异常，网状纤维未见增生。遗传学：JAK2 V617F 突变阳性，BCR-ABL1 阴性。判读：原发性血小板增多症。要点：克隆性血小板增多时巨核细胞增生明显、体积大且成簇分布；诊断前须先排除感染、缺铁、脾切除等反应性原因。",
+      "lab": "①巨核细胞体积巨大，常位于涂片尾部、边缘与骨髓小粒处，低倍镜（10×）下全片扫视是标准做法；高倍镜下视野小，反而容易漏检。②巨核细胞计数应在低倍镜下扫视全片后报告「全片个数」或按涂片面积折算，正常每张涂片约 7–35 个，不宜按有核细胞分类的百分比报告。③与破骨细胞鉴别：破骨细胞含多个彼此完全独立的核（每个核各有核仁）、胞质含空泡、常贴附于骨小梁旁；巨核细胞的核叶彼此相连，属单一核。④骨髓穿刺「干抽」时应考虑骨髓纤维化，须加做骨髓活检与网状纤维染色——纤维化时巨核细胞常成簇分布并伴纤维组织增生。⑤小巨核细胞（<20μm）、单圆核与多小核巨核细胞是骨髓增生异常综合征的重要形态学依据，发现时应主动描述并在报告中提示。⑥评估产板型巨核细胞所占比例具有实用价值：免疫性血小板减少症时产板型减少，而血小板增多症时产板型增多。"
+    },
+    "en": {
+      "n": "Megakaryocyte",
+      "d": "Largest marrow cell (30-100 µm); huge polyploid multilobed nucleus; abundant pale blue-purple cytoplasm shedding platelets.",
+      "tags": ["Giant", "Polyploid", "Platelet shedding"],
+      "morph": "30-100 µm, the largest marrow cell; giant polyploid nucleus (8N-64N, usually 16N-32N) formed by endomitosis, lobes overlapping like a bunch of grapes but belonging to one nucleus; abundant pale blue-purple cytoplasm with peripheral demarcation zones shedding 1000-3000 platelets per cell.",
+      "stain": "Cytoplasm pale blue-purple with clusters of fine purple-red granules; nucleus purple-red with coarse cord-like chromatin.",
+      "diff": "vs osteoclast (multiple entirely separate nuclei each with a nucleolus, vacuolated cytoplasm); vs multinucleate giant cell (nuclei arranged peripherally); vs metastatic carcinoma (pleomorphic nuclei, huge nucleoli); micromegakaryocytes suggest MDS.",
+      "clin": "Increased: ITP (with maturation arrest), CML, polycythemia vera, essential thrombocythemia. Decreased/absent: aplastic anemia, acute leukemia, advanced myelofibrosis. Micromegakaryocytes and monolobed forms are hallmarks of MDS.",
+      "labels": {
+        "nucleus": "Nucleus",
+        "cytoplasm": "Cytoplasm"
+      },
+      "labelDetail": {
+        "nucleus": "Polyploid (8N-64N, usually 16N-32N) by endomitosis; lobes overlap like grapes but remain connected as a single nucleus, unlike the separate nuclei of an osteoclast.",
+        "cytoplasm": "Abundant pale blue-purple cytoplasm with clustered granules; peripheral zones demarcate and shed about 1000-3000 platelets per cell."
+      },
+      "size": "30–100 µm",
+      "nc": "Polyploid multilobed 8N–64N",
+      "ref": "7–35 per marrow smear (mainly 8N–32N, up to 64N)",
+      "case": "Man, 56, persistently raised platelet count for 3 months without bleeding or thrombosis. Platelets 786×10⁹/L, WBC 11.8×10⁹/L, Hb 152 g/L, normal ferritin and CRP. Marrow: striking megakaryocytic hyperplasia in large clusters, mainly mature forms with abundant cytoplasm and active platelet shedding; giant forms and bare nuclei present; granulopoiesis and erythropoiesis unremarkable, no reticulin fibrosis. Genetics: JAK2 V617F positive, BCR-ABL1 negative. Interpretation: essential thrombocythaemia. Key point: Clonal thrombocytosis produces large, clustered megakaryocytes - but exclude infection, iron deficiency and post-splenectomy reactive causes first.",
+      "lab": "① Megakaryocytes are huge and sit at the smear tail, edges and near marrow particles; scan the whole film under low power (10×) - the high-power field is too small and they are missed. ② Report megakaryocytes as a count per whole film (or per unit area) after low-power screening; normal is about 7-35 per film. Do not report them as a percentage of nucleated cells. ③ Distinguish osteoclasts: they have several entirely separate nuclei each with its own nucleolus, vacuolated cytoplasm, and lie next to bone trabeculae; megakaryocyte lobes remain connected as one nucleus. ④ A 'dry tap' suggests myelofibrosis - add a trephine biopsy with reticulin staining; in fibrosis megakaryocytes form clusters amid increased reticulin. ⑤ Micromegakaryocytes (<20 µm), monolobed and multinucleated small forms are key morphologic evidence of MDS - describe them proactively. ⑥ Assessing the proportion of platelet-producing megakaryocytes is useful: they are reduced in ITP and increased in thrombocythaemia."
+    }
+  }
+  },
+  plasma_cell:{
+  group: "marrow",
+  size: "10–20μm",
+  nc: "核偏位，车轮状染色质",
+  ref: "正常骨髓 <2%（约0.5%–1.5%）；外周血不应出现",
+  smearKey: "plasma_cell",
+  t: {
+    "zh": {
+      "n": "浆细胞",
+      "d": "B细胞终末分化产物；核偏位、染色质粗块沿核膜辐射排列成车轮状；胞质深蓝，核旁有淡染的核周晕。",
+      "tags": ["核偏位", "车轮核", "核周晕"],
+      "morph": "由B淋巴细胞受抗原刺激后终末分化而成，是抗体工厂。胞体10–20μm，卵圆形，边界清楚；核圆、显著偏位于细胞一端，染色质极粗块状，沿核膜呈辐射状排列，形成典型的车轮状/钟面状核，无核仁；胞质极丰富、深蓝色，核旁可见一新月形淡染区即核周晕（高尔基体与中心体所在），胞质内常见空泡，免疫球蛋白积聚时形成Russell小体（嗜酸性红色球形包涵体）或葡萄状Mott细胞。",
+      "stain": "胞质深蓝（强嗜碱性，因粗面内质网极为丰富），核周晕淡染甚至不着色，界限清晰；核紫红色，粗块状染色质呈车轮状排列，是最具辨识度的特征。",
+      "diff": "①与淋巴细胞：淋巴核居中或浅凹、染色质均匀浓集、胞质天蓝极薄、无核周晕；浆细胞核偏位、车轮状染色质、深蓝胞质+核周晕。②与浆细胞样淋巴细胞：后者核染色质尚未完全形成车轮状、核周晕不明显。③与反应性/恶性浆细胞鉴别：恶性者核质比增高、可见双核/多核、核仁明显、胞质嗜碱性减弱、成簇分布。④与Mott细胞：胞质内充满球形包涵体（葡萄状）。",
+      "clin": "正常骨髓<2%（0.5%–1.5%），外周血出现即为病理。显著增多：多发性骨髓瘤（骨髓克隆性浆细胞≥10%或活检证实浆细胞瘤，常伴CRAB症状：高钙、肾损、贫血、骨病）、意义未明单克隆丙种球蛋白病(MGUS，<10%)、浆细胞瘤、系统性轻链型淀粉样变、POEMS综合征。反应性增多（常<10%且为成熟浆细胞）：慢性感染（结核、骨髓炎）、自身免疫病（SLE、类风湿关节炎）、肝硬化、恶性肿瘤、药物过敏。",
+      "labels": {
+        "nucleus": "车轮核",
+        "cytoplasm": "深蓝胞质",
+        "halo": "核周晕"
+      },
+      "labelDetail": {
+        "nucleus": "核显著偏位、染色质粗块状沿核膜辐射排列成车轮状/钟面状，无核仁——这是浆细胞最具辨识度的标志，也是与淋巴细胞鉴别的核心。",
+        "cytoplasm": "胞质极丰富、深蓝色（粗面内质网丰富故强嗜碱性）；可含空泡，免疫球蛋白积聚时形成Russell小体或Mott细胞（葡萄状）。",
+        "halo": "核旁新月形淡染区即核周晕，是高尔基体与中心体所在区域，也是浆细胞区别于淋巴细胞的重要标志。"
+      },
+      "size": "10–20μm",
+      "nc": "核偏位，车轮状染色质",
+      "ref": "正常骨髓 <2%（约0.5%–1.5%）；外周血不应出现",
+      "case": "男性，66岁，腰背痛、乏力、反复肺部感染6个月。Hb 82 g/L，血钙 2.92 mmol/L，肌酐 198 μmol/L，ESR 110 mm/h。血清蛋白电泳：M 蛋白 38 g/L；免疫固定电泳 IgG-λ 阳性；血清游离轻链比值异常。骨髓：克隆性浆细胞占 26%，可见双核与多核浆细胞、核仁明显、核周晕不清。影像：腰椎与颅骨多发溶骨性破坏。判读：多发性骨髓瘤（IgG-λ 型）。要点：满足 CRAB 中的高钙、肾损害、贫血与骨病四项，符合症状性骨髓瘤诊断标准；需与意义未明单克隆丙种球蛋白病（MGUS，浆细胞 <10% 且无终末器官损害）鉴别。",
+      "lab": "①浆细胞在骨髓涂片中分布不均，常成簇出现，应在低倍镜下扫视全片并在骨髓小粒处重点观察，避免漏检或高估。②反应性浆细胞与克隆性浆细胞形态高度重叠，确诊依赖流式免疫表型（CD138 阳性、CD38 阳性、胞质轻链限制性）与骨髓活检，单靠形态不足以区分 MGUS 与骨髓瘤。③浆细胞核周晕为高尔基体所在区域，染色不佳时晕不明显，须保证染色质量后再判读核周晕有无。④Russell 小体与 Mott 细胞需与空泡变性、吞噬物及其他包涵体鉴别，必要时加做免疫球蛋白染色确认性质。⑤浆细胞比例应分类 500 个有核细胞后计算；骨髓活检切片 CD138 免疫组化计数受分布影响更小、更为可靠。⑥外周血出现浆细胞即为病理表现（浆细胞白血病或晚期骨髓瘤），应立即主动报告临床。"
+    },
+    "en": {
+      "n": "Plasma Cell",
+      "d": "End-stage B cell; eccentric nucleus with radial cartwheel chromatin; deep blue cytoplasm and a pale perinuclear halo.",
+      "tags": ["Eccentric", "Cartwheel", "Perinuclear halo"],
+      "morph": "10-20 µm oval cell derived from antigen-stimulated B cells; round eccentric nucleus with coarse chromatin arranged radially along the nuclear membrane (cartwheel/clock-face), no nucleolus; abundant deep blue cytoplasm with a crescentic pale perinuclear halo (Golgi); vacuoles, Russell bodies or Mott cells may be present.",
+      "stain": "Cytoplasm intensely basophilic deep blue (abundant rough ER); the perinuclear halo stays pale; nucleus purple-red with radial cartwheel chromatin.",
+      "diff": "vs lymphocyte (central nucleus, thin sky-blue rim, no halo); vs plasmacytoid lymphocyte (no full cartwheel); malignant features: high N:C, binucleation, nucleoli, clusters. Mott cells contain grape-like globules.",
+      "clin": "Normal marrow <2%; absent from blood. Marked increase: multiple myeloma (≥10% clonal plasma cells plus CRAB features), MGUS, plasmacytoma, AL amyloidosis, POEMS. Reactive increase (usually <10%, mature): chronic infection, autoimmune disease, cirrhosis.",
+      "labels": {
+        "nucleus": "Nucleus",
+        "cytoplasm": "Cytoplasm",
+        "halo": "Halo"
+      },
+      "labelDetail": {
+        "nucleus": "Eccentric, with coarse chromatin radiating along the nuclear membrane to form the classic cartwheel/clock-face pattern; no nucleolus.",
+        "cytoplasm": "Abundant deep blue cytoplasm (rich rough ER); may contain vacuoles, Russell bodies or grape-like Mott globules of immunoglobulin.",
+        "halo": "The crescentic pale perinuclear zone is the Golgi/centrosome region — a key marker separating plasma cells from lymphocytes."
+      },
+      "size": "10–20 µm",
+      "nc": "Eccentric, cartwheel chromatin",
+      "ref": "Normal marrow <2% (about 0.5%–1.5%); absent from blood",
+      "case": "Man, 66, low back pain, fatigue and recurrent chest infections for 6 months. Hb 82 g/L, calcium 2.92 mmol/L, creatinine 198 µmol/L, ESR 110 mm/h. Serum protein electrophoresis: M-protein 38 g/L; immunofixation IgG-lambda; abnormal free light-chain ratio. Marrow: 26% clonal plasma cells with binucleate and multinucleate forms, prominent nucleoli and an indistinct perinuclear halo. Imaging: multiple lytic lesions of the lumbar spine and skull. Interpretation: multiple myeloma, IgG-lambda. Key point: CRAB criteria are met (hypercalcaemia, renal impairment, anaemia, bone disease) - symptomatic myeloma, to be distinguished from MGUS (plasma cells <10% with no end-organ damage).",
+      "lab": "① Plasma cells are unevenly distributed and often clustered; screen the whole film under low power and examine marrow particles carefully to avoid missing or overestimating them. ② Reactive and clonal plasma cells overlap heavily in morphology; diagnosis requires flow cytometry (CD138+, CD38+, cytoplasmic light-chain restriction) and a trephine biopsy - morphology alone cannot separate MGUS from myeloma. ③ The perinuclear halo is the Golgi region and disappears with poor staining; ensure good stain quality before judging whether a halo is present. ④ Russell bodies and Mott cells must be distinguished from vacuolar degeneration, phagocytosed material and other inclusions; confirm with immunoglobulin stains if needed. ⑤ Calculate the plasma-cell percentage after classifying 500 nucleated cells; CD138 immunohistochemistry on the trephine is less affected by patchy distribution and more reliable. ⑥ Plasma cells in blood are always pathologic (plasma-cell leukaemia or advanced myeloma) - alert the clinician immediately."
+    }
+  }
+  },
+  blast:{
+  group: "path",
+  size: "10–20μm",
+  nc: "核质比高，核仁明显",
+  ref: "正常骨髓 <5%；外周血不应出现；急性白血病阈值 ≥20%",
+  smearKey: "blast",
+  t: {
+    "zh": {
+      "n": "原始细胞（示意）",
+      "d": "核大占胞体4/5以上，染色质细致如细沙、核仁明显（常2–5个）；胞质极少、嗜碱性强，髓系可见Auer小体。",
+      "tags": ["高核质比", "明显核仁", "细染色质"],
+      "morph": "胞体10–20μm，圆或椭圆形。核大、居中或稍偏位，占胞体4/5以上（核质比高），核圆或略有凹陷/折叠；染色质极细致，呈均匀分布的细沙样/细网状，核膜清晰，核仁明显（粒系常2–5个、淋系常1–2个）；胞质极少，呈核周薄层或窄环，强嗜碱性，一般无颗粒。属于未分化的造血前体细胞，正常仅存在于骨髓。",
+      "stain": "核染色质淡紫红色、细致均匀；核仁淡蓝色、大而清晰（与核染色质形成对比）；胞质深蓝至天蓝色，无颗粒或仅有少许非特异性颗粒。髓系原始细胞胞质中若出现紫红色杆状Auer小体，即可确诊髓系来源（急非淋），这是最具决定意义的形态学标志。",
+      "diff": "三系原始细胞鉴别：①原粒细胞：胞体10–20μm、核圆、核仁2–5个、胞质天蓝较透亮、可见Auer小体（髓系特异，急粒M1/M2）；②原淋巴细胞：胞体小(10–18μm)、核仁1–2个且较小、胞质天蓝极薄、核染色质略粗、无Auer小体（急淋ALL，L1/L2/L3）；③原单核细胞：胞体大、核常折叠扭曲或有切迹、胞质灰蓝丰富、可有伪足与吞噬现象（急单M5）。④与原始红细胞：胞质深蓝油画感、边缘瘤状突起。⑤与原始巨核细胞：胞体巨大、胞质有血小板样突起。⑥确诊依赖细胞化学染色（POX、NSE）与流式免疫分型（MPO、CD13/CD33、CD19/CD3、CD14）。",
+      "clin": "正常骨髓<5%，外周血出现原始细胞即为病理表现。原始细胞比例≥20%（WHO 第4版标准；伴特定遗传学异常如t(15;17)、t(8;21)、inv(16)者无论比例均可诊断急性白血病）是急性白血病的核心诊断阈值；3%–19%为骨髓增生异常综合征伴原始细胞增多或白血病前期。FAB分型：ALL分L1/L2/L3，AML分M0–M7。Auer小体阳性=髓系（AML）；t(15;17)的急性早幼粒细胞白血病(M3)可见柴捆状Auer小体，对全反式维甲酸(ATRA)治疗反应极佳。",
+      "labels": {
+        "nucleus": "大核/核仁",
+        "cytoplasm": "少量胞质"
+      },
+      "labelDetail": {
+        "nucleus": "核占胞体4/5以上，染色质细致均匀如细沙，核仁大而明显（粒系2–5个、淋系1–2个）——核仁数量与染色质细致程度是原始细胞区别于成熟细胞的核心。",
+        "cytoplasm": "胞质极少呈薄层环，强嗜碱性深蓝至天蓝、一般无颗粒；髓系原始细胞若见紫红色杆状Auer小体即可确诊髓系来源。"
+      },
+      "size": "10–20μm",
+      "nc": "核质比高，核仁明显",
+      "ref": "正常骨髓 <5%；外周血不应出现；急性白血病阈值 ≥20%",
+      "case": "男性，34岁，牙龈出血、发热、骨痛2周。Hb 74 g/L，PLT 28×10⁹/L，WBC 42×10⁹/L。外周血涂片：原始细胞占 68%，胞体中等、核染色质细致、核仁 2–3 个，胞质中可见紫红色杆状 Auer 小体，未见柴捆状排列。骨髓：原始细胞 82%，POX 阳性率 92%。流式：CD13、CD33、MPO、CD34 阳性，淋系标志阴性。遗传学：BCR-ABL1 阴性，NPM1 突变阳性。判读：急性髓系白血病（非 M3 型）。要点：Auer 小体阳性即可确定为髓系来源，这是形态学上最具决定意义的依据，可立即启动髓系方向的检查与处理。",
+      "lab": "①原始细胞比例 ≥20% 为急性白血病阈值（WHO 第4版）；但伴 t(15;17)、t(8;21)、inv(16) 等重现性遗传学异常者，无论原始细胞比例多少均可诊断，不可机械套用 20% 阈值。②Auer 小体是髓系特异标志，须油镜仔细寻找，散在分布时极易漏检；柴捆状（faggot）Auer 小体提示急性早幼粒细胞白血病（M3）。③M3 属血液科急症，涂片一旦发现大量胞质密集粗颗粒的异常早幼粒细胞或柴捆状小体，应立即电话报告临床，不必等待正式报告发出。④原始细胞三系鉴别（粒系／淋系／单核系）不能仅凭形态，必须结合细胞化学染色（POX、NSE 及氟化钠抑制试验）与流式免疫分型。⑤原始细胞易破碎形成涂抹细胞（篮细胞），急性淋巴细胞白血病时尤为明显；计数应以完整细胞为准，破碎细胞不计入分类。⑥骨髓穿刺「干抽」时可用骨髓活检或外周血涂片辅助判断，并在报告中说明取材情况，避免比例被低估。"
+    },
+    "en": {
+      "n": "Blast (schema)",
+      "d": "Nucleus ≥4/5 of the cell with fine chromatin and prominent nucleoli; scanty basophilic cytoplasm; Auer rods indicate myeloid lineage.",
+      "tags": ["High N:C", "Prominent nucleoli", "Fine chromatin"],
+      "morph": "10-20 µm round cell; large nucleus ≥4/5 of the cell, fine evenly distributed chromatin, distinct nuclear membrane, prominent nucleoli (myeloid 2-5, lymphoid 1-2); scanty deeply basophilic agranular cytoplasm.",
+      "stain": "Pale violet fine chromatin with large pale blue nucleoli; cytoplasm deep blue to sky-blue with no granules; Auer rods are azurophilic purple-red rods.",
+      "diff": "Myeloblast: round nucleus, 2-5 nucleoli, Auer rods possible (AML). Lymphoblast: smaller, 1-2 nucleoli, thin sky-blue rim (ALL). Monoblast: large, folded nucleus, grey-blue cytoplasm with pseudopods (AML-M5). Confirm with cytochemistry (MPO, NSE) and flow cytometry.",
+      "clin": "Normal marrow <5%; blasts in blood are always pathologic. ≥20% blasts defines acute leukemia (WHO), except with recurrent genetic abnormalities (t(15;17), t(8;21), inv(16)); 3-19% = MDS with excess blasts. FAB: ALL L1-L3, AML M0-M7; APL (M3) shows faggot Auer rods and responds to ATRA.",
+      "labels": {
+        "nucleus": "Nucleus",
+        "cytoplasm": "Cytoplasm"
+      },
+      "labelDetail": {
+        "nucleus": "≥4/5 of the cell with fine even chromatin and prominent nucleoli (myeloid 2-5, lymphoid 1-2) — the hallmark that distinguishes a blast from a mature cell.",
+        "cytoplasm": "Scanty, deeply basophilic blue rim, usually agranular; purple-red Auer rods, if present, prove myeloid origin."
+      },
+      "size": "10–20 µm",
+      "nc": "High N:C, prominent nucleoli",
+      "ref": "Normal marrow <5%; absent from blood; acute leukemia threshold ≥20%",
+      "case": "Man, 34, gingival bleeding, fever and bone pain for 2 weeks. Hb 74 g/L, platelets 28×10⁹/L, WBC 42×10⁹/L. Blood film: 68% blasts of medium size with fine chromatin and 2-3 nucleoli; purple-red Auer rods present, no faggot arrangement. Marrow: 82% blasts, POX positive in 92%. Flow cytometry: CD13, CD33, MPO, CD34 positive; lymphoid markers negative. Genetics: BCR-ABL1 negative, NPM1 mutated. Interpretation: acute myeloid leukaemia, non-M3. Key point: The presence of Auer rods establishes myeloid lineage - the single most decisive morphologic finding, which allows myeloid-directed work-up to start immediately.",
+      "lab": "① A blast count ≥20% is the threshold for acute leukaemia (WHO 4th edition), but recurrent genetic abnormalities - t(15;17), t(8;21), inv(16) - allow the diagnosis at any blast percentage; do not apply the 20% rule mechanically. ② Auer rods are myeloid-specific; search carefully under oil as scattered rods are easily missed. Faggot (bundled) rods indicate acute promyelocytic leukaemia (M3). ③ APL is a haematologic emergency: on seeing numerous abnormal promyelocytes with dense coarse granules or faggot rods, telephone the clinician immediately rather than waiting for the typed report. ④ Lineage assignment (myeloid/lymphoid/monocytic) cannot rest on morphology alone - combine cytochemistry (POX, NSE with fluoride inhibition) with flow cytometry. ⑤ Blasts fragment easily into smudge (basket) cells, especially in ALL; count only intact cells and exclude smudges from the differential. ⑥ With a dry tap, use the trephine biopsy or the peripheral film as an adjunct and state the sampling problem, so the blast percentage is not underestimated."
+    }
+  }
+  }
+};
+
+let scene,camera,renderer,controls,labelRenderer,currentMesh;
+let autoRotate=true,mode='3d',showLabels=true,lang='zh';
+let speechOn = false;  // 每次打开强制静音，不记忆上次状态；需手动点击开启
+let hemi,keyL,fillL,smear1,smear2;
+let currentLabels=[];
+let currentKey='red_blood_cell';
+let quizActive=false;
+let quizCells=[],quizIndex=0,quizScore=0;
+let gltfLoader;
+var currentSmearURL = null;
+
+// ---- IndexedDB for custom models (本机上传，优先级2) ----
+function openModelDB(){
+  return new Promise(function(res){
+	var req=indexedDB.open('blood3d_models',1);
+	req.onupgradeneeded=function(){ req.result.createObjectStore('glb',{keyPath:'key'}); };
+	req.onsuccess=function(){res(req.result);};
+	req.onerror=function(){res(null);};
+  });
+}
+function saveUploadedModel(key,file){
+  file.arrayBuffer().then(function(buf){
+	openModelDB().then(function(db){
+	  if(!db) return;
+	  var tx=db.transaction('glb','readwrite');
+	  tx.objectStore('glb').put({key:key,buf:buf,name:file.name});
+	  var cb=document.getElementById('clearModelBtn'); if(cb) cb.style.display='block';
+	});
+  });
+}
+function getUploadedModel(key){
+  return openModelDB().then(function(db){
+	return new Promise(function(res){
+	  if(!db) return res(null);
+	  var tx=db.transaction('glb','readonly');
+	  var r=tx.objectStore('glb').get(key);
+	  r.onsuccess=function(){res(r.result?r.result.buf:null);};
+	  r.onerror=function(){res(null);};
+	});
+  });
+}
+function deleteUploadedModel(key){
+  return openModelDB().then(function(db){
+	return new Promise(function(res){
+	  if(!db) return res();
+	  var tx=db.transaction('glb','readwrite');
+	  tx.objectStore('glb').delete(key);
+	  tx.oncomplete=function(){res();};
+	});
+  });
+}
+function checkHasCustomModel(key){
+  getUploadedModel(key).then(function(buf){
+	var cb=document.getElementById('clearModelBtn'); if(cb) cb.style.display = buf ? 'block' : 'none';
+  });
+}
+
+// ---- IndexedDB for smear images (本机上传，优先级1) ----
+function openSmearDB(){
+  return new Promise(function(res){
+	var req=indexedDB.open('blood3d_smear',1);
+	req.onupgradeneeded=function(){ req.result.createObjectStore('imgs',{keyPath:'key'}); };
+	req.onsuccess=function(){res(req.result);};
+	req.onerror=function(){res(null);};
+  });
+}
+function saveSmear(smearKey,file){
+  return openSmearDB().then(function(db){
+	return new Promise(function(res){
+	  if(!db)return res();
+	  var tx=db.transaction('imgs','readwrite');
+	  tx.objectStore('imgs').put({key:smearKey,blob:file,name:file.name,type:file.type});
+	  tx.oncomplete=function(){res();};
+	});
+  });
+}
+function getSmear(smearKey){
+  return openSmearDB().then(function(db){
+	return new Promise(function(res){
+	  if(!db)return res(null);
+	  var tx=db.transaction('imgs','readonly');
+	  var q=tx.objectStore('imgs').get(smearKey);
+	  q.onsuccess=function(){res(q.result?q.result.blob:null);};
+	  q.onerror=function(){res(null);};
+	});
+  });
+}
+function delSmear(smearKey){
+  return openSmearDB().then(function(db){
+	return new Promise(function(res){
+	  if(!db)return res();
+	  var tx=db.transaction('imgs','readwrite');
+	  tx.objectStore('imgs').delete(smearKey);
+	  tx.oncomplete=function(){res();};
+	});
+  });
+}
+
+// ---- Upload trigger ----
+function triggerUpload(){
+  var mf=document.getElementById('modelFile'); if(mf) mf.click();
+}
+document.addEventListener('DOMContentLoaded',function(){
+  var mf=document.getElementById('modelFile'); if(mf) mf.addEventListener('change',function(e){
+	var file=e.target.files[0];
+	if(!file) return;
+	showLoading(true);
+	loadUploadedGLB(currentKey, file);
+	e.target.value='';
+  });
+  var usb=document.getElementById('uploadSmearBtn'); if(usb) usb.onclick=function(){ var sf=document.getElementById('smearFile'); if(sf) sf.click(); };
+  var sf=document.getElementById('smearFile'); if(sf) sf.onchange=function(e){
+	var file=e.target.files[0]; if(!file) return;
+	var cell=cells[currentKey];
+	var smearKey=cell?(cell.smearKey||currentKey):currentKey;
+	saveSmear(smearKey,file).then(function(){
+	  renderSmear(currentKey,cell,cell.t[lang]);
+	  showBanner(i18n[lang].smear_uploaded,'#4CAF50');
+	});
+	e.target.value='';
+  };
+  var csb=document.getElementById('clearSmearBtn'); if(csb) csb.onclick=function(){
+	var cell=cells[currentKey];
+	var smearKey=cell?(cell.smearKey||currentKey):currentKey;
+	delSmear(smearKey).then(function(){
+	  renderSmear(currentKey,cell,cell.t[lang]);
+	  showBanner(i18n[lang].smear_cleared,'#4CAF50');
+	});
+  };
+});
+function clearUploadedModel(){
+  deleteUploadedModel(currentKey).then(function(){
+	var cb=document.getElementById('clearModelBtn'); if(cb) cb.style.display='none';
+	selectCell(currentKey, document.querySelector('.sidebar button.active'), true);
+	showBanner(i18n[lang].model_cleared, '#4CAF50');
+  });
+}
+function showLoading(show){
+  var lb=document.getElementById('loadingBanner'); if(lb) lb.style.display = show ? 'block' : 'none';
+}
+
+// ---- GLB Loading ----
+function loadUploadedGLB(key, file){
+  var url = URL.createObjectURL(file);
+  gltfLoader.load(url, function(gltf){
+	URL.revokeObjectURL(url);
+	var model = gltf.scene;
+	model.updateMatrixWorld(true);
+	var box = new THREE.Box3().setFromObject(model);
+	var center = box.getCenter(new THREE.Vector3());
+	var size = box.getSize(new THREE.Vector3());
+	var maxd = Math.max(size.x, size.y, size.z) || 1;
+	model.position.sub(center);
+	var targetSize = 3;
+	model.scale.setScalar(targetSize / maxd);
+	if(currentMesh){scene.remove(currentMesh);clearObj(currentMesh);}
+	currentMesh = model;
+	scene.add(currentMesh);
+	frameCurrentCell();
+	saveUploadedModel(key, file);
+	showLoading(false);
+	showBanner(i18n[lang].upload_ok, '#4CAF50');
+  }, undefined, function(err){
+	URL.revokeObjectURL(url);
+	showLoading(false);
+	showBanner(i18n[lang].upload_fail, '#f44336');
+	console.error(err);
+  });
+}
+function parseGLBFromBuffer(key, buf){
+  return new Promise(function(resolve, reject){
+	gltfLoader.parse(buf, '', function(gltf){
+	  var model = gltf.scene;
+	  model.updateMatrixWorld(true);
+	  var box = new THREE.Box3().setFromObject(model);
+	  var center = box.getCenter(new THREE.Vector3());
+	  var size = box.getSize(new THREE.Vector3());
+	  var maxd = Math.max(size.x, size.y, size.z) || 1;
+	  model.position.sub(center);
+	  var targetSize = 3;
+	  model.scale.setScalar(targetSize / maxd);
+	  resolve(model);
+	}, reject);
+  });
+}
+function showBanner(msg, color){
+  var b = document.getElementById('errBanner');
+  if(b){ b.style.display='block'; b.style.background=color; b.textContent=msg; }
+  setTimeout(function(){if(b) b.style.display='none';}, 3000);
+}
+
+// ---- 拖拽自转 ----
+let cellDragging = false;
+let cellDragAccum = { x: 0, y: 0 };
+let cellPrevMouse = { x: 0, y: 0 };
+let _dragTimer = null;
+const cellRaycaster = new THREE.Raycaster();
+const _activePointers = new Set();
+
+function initThree(){
+  var c=document.getElementById('threeContainer');
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(45,c.clientWidth/c.clientHeight,0.1,1000);
+  camera.position.set(0,0,7);
+  renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+  renderer.setSize(c.clientWidth,c.clientHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  if(renderer.outputColorSpace!==undefined) renderer.outputColorSpace=THREE.SRGBColorSpace;
+  c.appendChild(renderer.domElement);
+
+  renderer.domElement.style.touchAction = 'none';
+  renderer.domElement.addEventListener('touchmove', function(e) {
+	if (e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
+
+  try {
+	if (typeof THREE.CSS2DRenderer !== 'undefined') {
+	  labelRenderer=new THREE.CSS2DRenderer();
+	  labelRenderer.setSize(c.clientWidth,c.clientHeight);
+	  labelRenderer.domElement.style.position='absolute';
+	  labelRenderer.domElement.style.top='0';
+	  labelRenderer.domElement.style.left='0';
+	  labelRenderer.domElement.style.pointerEvents='none';
+	  document.getElementById('labelLayer').appendChild(labelRenderer.domElement);
+	} else { showLabels = false; }
+  } catch(e) { showLabels = false; }
+
+  controls=new THREE.OrbitControls(camera,renderer.domElement);
+  controls.enableRotate=true; controls.enableZoom=true; controls.enablePan=true;
+  controls.enableDamping=true; controls.dampingFactor=0.08;
+  controls.minDistance=1.2; controls.maxDistance=80;
+  controls.autoRotate=autoRotate; controls.autoRotateSpeed=1.6;
+  if(THREE.TOUCH) controls.touches={ONE:THREE.TOUCH.ROTATE, TWO:THREE.TOUCH.DOLLY_PAN};
+
+  hemi=new THREE.HemisphereLight(0xffffff,0x404050,1.0);
+  keyL=new THREE.DirectionalLight(0xffffff,1.3); keyL.position.set(5,6,6);
+  fillL=new THREE.DirectionalLight(0xffffff,0.5); fillL.position.set(-5,-3,-4);
+  smear1=new THREE.DirectionalLight(0xffffff,0.95); smear1.position.set(0,0,6);
+  smear2=new THREE.DirectionalLight(0xfff3f3,0.35); smear2.position.set(0,2,3);
+  scene.add(hemi,keyL,fillL,smear1,smear2);
+  applyLights();
+
+  gltfLoader = new THREE.GLTFLoader();
+
+  function startCellDrag(e){
+	if(!currentMesh) return false;
+	var rect = renderer.domElement.getBoundingClientRect();
+	var ndc = new THREE.Vector2(
+	  ((e.clientX-rect.left)/rect.width)*2-1,
+	  -((e.clientY-rect.top)/rect.height)*2+1
+	);
+	cellRaycaster.setFromCamera(ndc,camera);
+	var meshes=[]; currentMesh.updateMatrixWorld(true);
+	currentMesh.traverse(function(o){ if(o.isMesh) meshes.push(o); });
+	var hits=cellRaycaster.intersectObjects(meshes,false);
+	if(hits.length>0){
+	  cellDragging=true; if(controls) controls.enabled=false;
+	  cellPrevMouse={x:e.clientX,y:e.clientY};
+	  cellDragAccum={x:0,y:0};
+	  if(controls) controls.autoRotate=false;
+	  clearTimeout(_dragTimer);
+	  _dragTimer=setTimeout(endCellDrag,2500);
+	  return true;
+	}
+	return false;
+  }
+  function endCellDrag(){
+	if(!cellDragging && _activePointers.size===0) return;
+	cellDragging=false; clearTimeout(_dragTimer);
+	if(controls){ controls.enabled=true; controls.autoRotate=autoRotate; controls.update(); }
+  }
+
+  renderer.domElement.addEventListener('pointerdown',function(e){
+	_activePointers.add(e.pointerId);
+	if(_activePointers.size>=2){ cellDragging=false; if(controls){controls.enabled=true;controls.autoRotate=false;} return; }
+	if(e.pointerType==='touch' || (e.pointerType==='mouse'&&e.button===0)){
+	  var ok=startCellDrag(e);
+	  if(ok) e.preventDefault();
+	  else if(controls){ controls.enabled=true; }
+	}
+  });
+  renderer.domElement.addEventListener('pointermove',function(e){
+	if(_activePointers.size>=2){ endCellDrag(); return; }
+	if(!cellDragging) return;
+	var dx=e.clientX-cellPrevMouse.x, dy=e.clientY-cellPrevMouse.y;
+	cellDragAccum.y += dx*0.008; cellDragAccum.x += dy*0.008;
+	cellPrevMouse={x:e.clientX,y:e.clientY};
+  });
+  function onPtrUp(e){
+	_activePointers.delete(e.pointerId);
+	if(_activePointers.size<2) endCellDrag();
+  }
+  renderer.domElement.addEventListener('pointerup',onPtrUp);
+  renderer.domElement.addEventListener('pointercancel',onPtrUp);
+  renderer.domElement.addEventListener('pointerleave',function(e){ _activePointers.delete(e.pointerId); endCellDrag(); });
+
+  animate();
+  window.addEventListener('resize',function(){
+	camera.aspect=c.clientWidth/c.clientHeight; camera.updateProjectionMatrix();
+	renderer.setSize(c.clientWidth,c.clientHeight);
+	if(labelRenderer) labelRenderer.setSize(c.clientWidth,c.clientHeight);
+  });
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  if (currentMesh) {
+	if (cellDragging) {
+	  currentMesh.rotation.x += cellDragAccum.x;
+	  currentMesh.rotation.y += cellDragAccum.y;
+	  cellDragAccum.x = 0; cellDragAccum.y = 0;
+	} else if (autoRotate && controls && !controls.autoRotate) {
+	  currentMesh.rotation.y += 0.005;
+	}
+  }
+  if(controls) controls.update();
+  renderer.render(scene,camera);
+  if(showLabels && labelRenderer) labelRenderer.render(scene,camera);
+}
+
+function applyLights(){var m=mode==='smear';hemi.visible=!m;keyL.visible=!m;fillL.visible=!m;smear1.visible=m;smear2.visible=m;}
+
+function mat(color,opt){
+  if(mode==='smear') return new THREE.MeshLambertMaterial(Object.assign({color:new THREE.Color(color)},opt));
+  return new THREE.MeshStandardMaterial(Object.assign({color:new THREE.Color(color),roughness:0.6,metalness:0},opt));
+}
+function rnd(R){var v;do{v=new THREE.Vector3(Math.random()*2-1,Math.random()*2-1,Math.random()*2-1);}while(v.length()>1);return v.multiplyScalar(R);}
+function clearObj(g){scene.remove(g);g.traverse(function(o){if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}});}
+
+function createDraggableLabel(text, position3D, labelId) {
+  if (!labelRenderer || typeof THREE.CSS2DObject === 'undefined') return null;
+  try {
+	var div = document.createElement('div');
+	div.className = 'tag3d'; div.textContent = text;
+	div.style.pointerEvents = 'auto';
+	var dragOffset = { x: 0, y: 0 };
+	var label = new THREE.CSS2DObject(div);
+	label.position.copy(position3D);
+	scene.add(label);
+	var dragging = false, startP = {x:0,y:0}, startOff = {x:0,y:0};
+	var clickStartTime = 0, startPos = {x:0,y:0};
+	div.addEventListener('pointerdown', function(e) {
+	  e.stopPropagation(); dragging = true; div.classList.add('drag');
+	  div.setPointerCapture(e.pointerId);
+	  startP = { x: e.clientX, y: e.clientY }; startOff = { x: dragOffset.x, y: dragOffset.y };
+	  clickStartTime = Date.now(); startPos = { x: e.clientX, y: e.clientY };
+	});
+	div.addEventListener('pointermove', function(e) {
+	  if (!dragging) return;
+	  dragOffset.x = startOff.x + (e.clientX - startP.x);
+	  dragOffset.y = startOff.y + (e.clientY - startP.y);
+	  div.style.transform = 'translate(calc(-50% + '+dragOffset.x+'px), calc(-50% + '+dragOffset.y+'px))';
+	});
+	div.addEventListener('pointerup', function(e) {
+	  dragging = false; div.classList.remove('drag'); div.releasePointerCapture(e.pointerId);
+	  var dt = Date.now() - clickStartTime;
+	  var dist = Math.hypot(e.clientX - startPos.x, e.clientY - startPos.y);
+	  if (dt < 300 && dist < 8) showLabelDetail(labelId, text);
+	});
+	currentLabels.push({ label: label, div: div });
+	return label;
+  } catch(e) { return null; }
+}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+var SOFT_BREAK = /(判读：|要点：|提醒：|对照：|Interpretation:|Contrast:|Remember|Key point:|判読：)/;
+function renderRich(el, text, soft){
+  if(!el) return;
+  if(!text){ el.innerHTML=''; if(el.parentNode) el.parentNode.style.display='none'; return; }
+  var parts = String(text).split(/(?=[\u2460-\u2473])/).filter(function(p){return p.trim();});
+  var html = '';
+  if(parts.length>1 && !/^[\u2460-\u2473]/.test(parts[0].trim())){
+	html += '<div class="nl-lead">'+escHtml(parts.shift().trim())+'</div>';
+  }
+  if(parts.length>1){
+	html += parts.map(function(p){return '<div class="nl">'+escHtml(p.trim())+'</div>';}).join('');
+  } else {
+	var flat = parts.join('');
+	var seg = soft ? flat.split(SOFT_BREAK) : [flat];
+	if(seg.length>1){
+	  var buf=[];
+	  for(var i=0;i<seg.length;i++){
+		if(i>0 && SOFT_BREAK.test(seg[i])) buf.push(seg[i]);
+		else if(i>0) buf[buf.length-1]+=seg[i];
+		else buf.push(seg[i]);
+	  }
+	  html += buf.map(function(p){return '<div class="nl-flat">'+escHtml(p.trim())+'</div>';}).join('');
+	} else html += escHtml(flat);
+  }
+  el.innerHTML = html;
+  if(el.parentNode) el.parentNode.style.display='';
+}
+
+function clearLabels(){ currentLabels.forEach(function(item){ scene.remove(item.label); if(item.div) item.div.remove(); }); currentLabels=[]; }
+
+function getAnchor(key, labelId){
+  var map={
+	red_blood_cell:{nucleus:new THREE.Vector3(0,0,0),center:new THREE.Vector3(0,0,1.3),membrane:new THREE.Vector3(1.2,0,0)},
+	reticulocyte:{reticulum:new THREE.Vector3(0,0,1.3),cell:new THREE.Vector3(0,0,0)},
+	platelet:{granule:new THREE.Vector3(0.4,0,0),plasma:new THREE.Vector3(0,0,0)},
+	neutrophil_seg:{nucleus:new THREE.Vector3(-0.45,0.1,0.8),granule:new THREE.Vector3(0.8,-0.5,0.5),cytoplasm:new THREE.Vector3(0,0,1.4)},
+	neutrophil_stab:{nucleus:new THREE.Vector3(0,0,1.3),granule:new THREE.Vector3(0.7,-0.4,0.4)},
+	eosinophil:{nucleus:new THREE.Vector3(0,0.5,0.5),granule:new THREE.Vector3(0.8,-0.3,0.3)},
+	basophil:{nucleus:new THREE.Vector3(0,0,0.8),granule:new THREE.Vector3(0.7,0.3,0.5)},
+	lymphocyte_small:{nucleus:new THREE.Vector3(0,0,0.9),cytoplasm:new THREE.Vector3(0.9,0,0)},
+	monocyte:{nucleus:new THREE.Vector3(-0.5,0.3,0.6),cytoplasm:new THREE.Vector3(0.8,-0.2,0.5),granule:new THREE.Vector3(0.5,0.5,0.5)},
+	pronormoblast:{nucleus:new THREE.Vector3(0,0,0.9),cytoplasm:new THREE.Vector3(0.9,0,0)},
+	basophilic_normoblast:{nucleus:new THREE.Vector3(0,0,0.9),cytoplasm:new THREE.Vector3(0.9,0,0)},
+	polychromatic_normoblast:{nucleus:new THREE.Vector3(0,0,0.8),cytoplasm:new THREE.Vector3(0.8,0,0)},
+	orthochromatic_normoblast:{nucleus:new THREE.Vector3(0,0,0.7),cytoplasm:new THREE.Vector3(0.7,0,0)},
+	megakaryocyte:{nucleus:new THREE.Vector3(0,0,2),cytoplasm:new THREE.Vector3(1.5,0,0)},
+	plasma_cell:{nucleus:new THREE.Vector3(-0.5,0.3,0.8),cytoplasm:new THREE.Vector3(0.8,0,0),halo:new THREE.Vector3(0.5,0.5,0.6)},
+	blast:{nucleus:new THREE.Vector3(0,0,0.9),cytoplasm:new THREE.Vector3(0.8,0,0)}
+  };
+  return map[key]&&map[key][labelId] ? map[key][labelId] : new THREE.Vector3(0,0,1.5);
+}
+
+function lobed(pts,r,color){var g=new THREE.Group();var m=mat(color);pts.forEach(function(p){var s=new THREE.Mesh(new THREE.SphereGeometry(r,20,16),m);s.position.set(p[0],p[1],p[2]);g.add(s);});return g;}
+function rod(x,y,z,rot,r,len){var m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,12),mat(0x6a2f8f));m.position.set(x,y,z);m.rotation.z=rot;return m;}
+
+function buildCell(key){
+  var g=new THREE.Group();
+  switch(key){
+	case 'red_blood_cell':{
+	  var R = 1.5;
+	  var geo = new THREE.SphereGeometry(R, 128, 128);
+	  var pos = geo.attributes.position;
+	  for(var i = 0; i < pos.count; i++){
+		var x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+		var y2 = y * 0.34;
+		var d = Math.hypot(x, z);
+		if(d < 1.2){ var indent = Math.cos(d * Math.PI / 2.4) * 0.62; y2 -= indent * (y >= 0 ? 1 : -1); }
+		pos.setXYZ(i, x, y2, z);
+	  }
+	  geo.computeVertexNormals();
+	  var body = new THREE.Mesh(geo, mat(0xd9534f, {transparent:true, opacity:0.96, roughness:0.35}));
+	  g.add(body); break;
+	}
+	case 'reticulocyte':{var body=new THREE.Mesh(new THREE.SphereGeometry(1.2,40,28),mat(0xe87f86,{transparent:true,opacity:0.96}));body.scale.set(1,0.34,1);g.add(body);var rm=mat(0x3a6ea5);for(var i=0;i<10;i++){var curve=new THREE.CatmullRomCurve3([rnd(0.5),rnd(0.5),rnd(0.5)]);g.add(new THREE.Mesh(new THREE.TubeGeometry(curve,12,0.015,6,false),rm));}break;}
+	case 'platelet':{var base=mat(0xb9c4e6);[[0,0,0,0.5,0.36,0.42],[0.18,0.05,0.02,0.32,0.26,0.3],[-0.15,0.04,-0.03,0.3,0.24,0.28]].forEach(function(s){var m=new THREE.Mesh(new THREE.SphereGeometry(s[3],18,14),base);m.position.set(s[0],s[1],s[2]);m.scale.set(s[4]/s[3],s[5]/s[3],1);g.add(m);});for(var i=0;i<12;i++){var p=rnd(0.42);var gr=new THREE.Mesh(new THREE.SphereGeometry(0.04,8,8),mat(0x8a5bd6));gr.position.copy(p);g.add(gr);}break;}
+	case 'neutrophil_seg':{var cyto=new THREE.Mesh(new THREE.SphereGeometry(1.3,40,32),mat(0xf3d9e2,{transparent:true,opacity:0.5}));g.add(cyto);g.add(lobed([[-0.45,0.1,0.02],[0.02,0.32,0.05],[0.48,-0.12,0]],0.44,0x6a2f8f));g.add(rod(-0.22,0.22,0.03,-0.5,0.1,0.55));g.add(rod(0.26,0.1,0.02,0.35,0.1,0.5));for(var i=0;i<70;i++){var p=rnd(1.22);if(p.length()<0.62)continue;var gr=new THREE.Mesh(new THREE.SphereGeometry(0.028,6,6),mat(0xc07bb0));gr.position.copy(p);g.add(gr);}break;}
+	case 'neutrophil_stab':{var cyto=new THREE.Mesh(new THREE.SphereGeometry(1.3,40,32),mat(0xf3d9e2,{transparent:true,opacity:0.5}));g.add(cyto);var curve=new THREE.CatmullRomCurve3([new THREE.Vector3(-0.7,0.1,0),new THREE.Vector3(-0.3,0.5,0),new THREE.Vector3(0.2,0.4,0),new THREE.Vector3(0.6,-0.2,0),new THREE.Vector3(0.3,-0.5,0),new THREE.Vector3(-0.2,-0.3,0),new THREE.Vector3(-0.7,0.1,0)]);g.add(new THREE.Mesh(new THREE.TubeGeometry(curve,60,0.22,14,false),mat(0x6a2f8f)));for(var i=0;i<70;i++){var p=rnd(1.22);if(p.length()<0.5)continue;var gr=new THREE.Mesh(new THREE.SphereGeometry(0.028,6,6),mat(0xc07bb0));gr.position.copy(p);g.add(gr);}break;}
+	case 'eosinophil':{var cyto=new THREE.Mesh(new THREE.SphereGeometry(1.3,40,32),mat(0xf6ece6,{transparent:true,opacity:0.45}));g.add(cyto);var nm=mat(0x6a2f8f);var l=new THREE.Mesh(new THREE.SphereGeometry(0.46,24,20),nm);l.position.set(-0.34,0.06,0);g.add(l);var r=new THREE.Mesh(new THREE.SphereGeometry(0.46,24,20),nm);r.position.set(0.34,0.06,0);g.add(r);var link=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.14,0.5,14),nm);link.rotation.z=Math.PI/2;link.position.set(0,0.06,0);g.add(link);var n=0,t=0;while(n<90&&t<600){t++;var p=rnd(1.18);if(p.length()<0.5)continue;if(p.distanceTo(new THREE.Vector3(-0.34,0.06,0))<0.55)continue;if(p.distanceTo(new THREE.Vector3(0.34,0.06,0))<0.55)continue;var gr=new THREE.Mesh(new THREE.SphereGeometry(0.075,10,10),mat(0xe0431a));gr.position.copy(p);g.add(gr);n++;}break;}
+	case 'basophil':{var cyto=new THREE.Mesh(new THREE.SphereGeometry(1.25,40,32),mat(0xf0e8f5,{transparent:true,opacity:0.5}));g.add(cyto);var nm=mat(0x4a2f7a);var nuc=lobed([[-0.2,0.1,0.05],[0.15,-0.05,0.02]],0.5,nm);g.add(nuc);for(var i=0;i<50;i++){var p=rnd(1.15);var gr=new THREE.Mesh(new THREE.SphereGeometry(0.05,8,8),mat(0x2a1f5a));gr.position.copy(p);g.add(gr);}break;}
+	case 'lymphocyte_small':{var cyto=new THREE.Mesh(new THREE.SphereGeometry(1.05,40,32),mat(0xbfe0ff,{transparent:true,opacity:0.55}));g.add(cyto);g.add(new THREE.Mesh(new THREE.SphereGeometry(0.85,40,32),mat(0x35399a)));for(var i=0;i<6;i++){var p=rnd(1.0);if(p.length()<0.82)continue;var gr=new THREE.Mesh(new THREE.SphereGeometry(0.04,8,8),mat(0x7d5bc0));gr.position.copy(p);g.add(gr);}break;}
+	case 'monocyte':{var cyto=new THREE.Mesh(new THREE.SphereGeometry(1.35,40,32),mat(0x9fb6cf,{transparent:true,opacity:0.55}));cyto.scale.set(1.25,0.98,0.98);g.add(cyto);var curve=new THREE.CatmullRomCurve3([new THREE.Vector3(-0.55,0.05,0),new THREE.Vector3(-0.3,0.5,0.05),new THREE.Vector3(0.15,0.55,0.05),new THREE.Vector3(0.55,0.2,0),new THREE.Vector3(0.6,-0.25,0),new THREE.Vector3(0.2,-0.5,0),new THREE.Vector3(-0.3,-0.35,0),new THREE.Vector3(-0.55,0.05,0)]);g.add(new THREE.Mesh(new THREE.TubeGeometry(curve,80,0.34,16,false),mat(0x7a5bb0,{transparent:true,opacity:0.95})));for(var i=0;i<26;i++){var p=rnd(1.15);if(p.length()<0.7)continue;var gr=new THREE.Mesh(new THREE.SphereGeometry(0.032,6,6),mat(0xb07bb0));gr.position.copy(p);g.add(gr);}break;}
+	case 'pronormoblast':{var cyto=new THREE.Mesh(new THREE.SphereGeometry(1.4,40,32),mat(0x3a4a8a,{transparent:true,opacity:0.9}));g.add(cyto);g.add(new THREE.Mesh(new THREE.SphereGeometry(0.9,40,32),mat(0x1a1a4a)));for(var i=0;i<3;i++){var nr=new THREE.Mesh(new THREE.SphereGeometry(0.15,12,10),mat(0x5a5aaa));nr.position.set(-0.3+i*0.3,0.3,0.7);g.add(nr);}break;}
+	case 'basophilic_normoblast':{var cyto=new THREE.Mesh(new THREE.SphereGeometry(1.3,40,32),mat(0x4a5aaa,{transparent:true,opacity:0.9}));g.add(cyto);g.add(new THREE.Mesh(new THREE.SphereGeometry(0.8,40,32),mat(0x2a2a6a)));break;}
+	case 'polychromatic_normoblast':{var cyto=new THREE.Mesh(new THREE.SphereGeometry(1.2,40,32),mat(0x8a7aaa,{transparent:true,opacity:0.85}));g.add(cyto);var nuc=new THREE.Mesh(new THREE.SphereGeometry(0.6,40,32),mat(0x3a2a5a));nuc.position.set(-0.1,0.1,0);g.add(nuc);break;}
+	case 'orthochromatic_normoblast':{var cyto=new THREE.Mesh(new THREE.SphereGeometry(1.1,40,32),mat(0xbfa0a0,{transparent:true,opacity:0.9}));g.add(cyto);g.add(new THREE.Mesh(new THREE.SphereGeometry(0.45,40,32),mat(0x2a1a3a)));break;}
+	case 'megakaryocyte':{var cyto=new THREE.Mesh(new THREE.SphereGeometry(2.5,40,32),mat(0xc4b5d6,{transparent:true,opacity:0.7}));cyto.scale.set(1.3,1,1);g.add(cyto);var nm=mat(0x5a3a8a);for(var i=0;i<5;i++){var lobe=new THREE.Mesh(new THREE.SphereGeometry(0.6,20,16),nm);lobe.position.set(Math.cos(i*1.2)*0.5,Math.sin(i*1.2)*0.5,0);g.add(lobe);}break;}
+	case 'plasma_cell':{var cyto=new THREE.Mesh(new THREE.SphereGeometry(1.2,40,32),mat(0x3a5aaa,{transparent:true,opacity:0.9}));g.add(cyto);var nuc=new THREE.Mesh(new THREE.SphereGeometry(0.55,40,32),mat(0x1a1a4a));nuc.position.set(-0.3,0.1,0.2);g.add(nuc);var halo=new THREE.Mesh(new THREE.SphereGeometry(0.3,20,16),mat(0x7a9aaa,{transparent:true,opacity:0.4}));halo.position.set(-0.1,0.2,0.5);g.add(halo);break;}
+	case 'blast':{var cyto=new THREE.Mesh(new THREE.SphereGeometry(1.2,40,32),mat(0xe8d5f0,{transparent:true,opacity:0.8}));g.add(cyto);g.add(new THREE.Mesh(new THREE.SphereGeometry(0.8,40,32),mat(0x5a3a8a)));for(var i=0;i<2;i++){var nr=new THREE.Mesh(new THREE.SphereGeometry(0.12,10,8),mat(0x9a8ac0));nr.position.set(-0.25+i*0.5,0.4,0.5);g.add(nr);}break;}
+  }
+  return g;
+}
+
+function frameCurrentCell(){
+  if(!currentMesh||!controls) return;
+  currentMesh.updateMatrixWorld(true);
+  var box=new THREE.Box3().setFromObject(currentMesh);
+  if(box.isEmpty()) return;
+  var center=box.getCenter(new THREE.Vector3());
+  var size=box.getSize(new THREE.Vector3());
+  var maxd=Math.max(size.x,size.y,size.z)||1;
+  if(!isFinite(maxd)||maxd<=0) return;
+  var r=maxd/2; var fov=camera.fov*Math.PI/180;
+  var dist=(r/Math.sin(fov/2))*1.5;
+  dist=Math.min(Math.max(dist,controls.minDistance),controls.maxDistance);
+  camera.position.set(center.x,center.y,center.z+dist);
+  controls.target.copy(center);
+  camera.near=Math.max(0.05,dist-r*0.5); camera.far=dist+r*8;
+  camera.updateProjectionMatrix(); controls.update();
+}
+
+function setMode(x){if(quizActive)return;mode=x;var btn3d=document.getElementById('btn3d');if(btn3d)btn3d.classList.toggle('active',x==='3d');var ml=document.getElementById('modeLabel');if(ml)ml.textContent=x==='smear'?'🔬 涂片模式':'🧊 立体模式';applyLights();selectCell(currentKey,null,true);}
+function toggleLabels(){if(quizActive)return;showLabels=!showLabels;var bl=document.getElementById('btnLabels');if(bl)bl.classList.toggle('active',showLabels);if(bl)bl.textContent=showLabels?(lang==='zh'?'🏷 标注':'🏷 Labels'):(lang==='zh'?'🏷 关标注':'🏷 Hide');if(!showLabels)clearLabels();else selectCell(currentKey,null,true);}
+function setLang(l){if(quizActive)return;if(l!=='zh'&&l!=='en')l='zh';lang=l;var ls=document.getElementById('langSel');if(ls)ls.value=l;localStorage.setItem('lang',l);applyI18n();syncSpeechBtn();expandHwBadge();selectCell(currentKey,null,true);}
+function applyI18n(){var t=i18n[lang];Object.keys(t).forEach(function(k){var els=document.querySelectorAll('[data-i18n="'+k+'"]');els.forEach(function(el){el.textContent=t[k];});});}
+
+function toggleRotate(){
+	autoRotate = !autoRotate;
+  if(controls) controls.autoRotate = autoRotate;
+  var topBtn = document.getElementById('btnRotateTop');
+  var botBtn = document.getElementById('rotateBtnBottom');
+  if (autoRotate) { if(topBtn)topBtn.classList.add('active'); if(botBtn)botBtn.classList.add('active'); }
+  else { if(topBtn)topBtn.classList.remove('active'); if(botBtn)botBtn.classList.remove('active'); }
+  var zh = (lang === 'zh');
+  var txt = zh ? (autoRotate ? '🔄 自动旋转' : '▶ 开始旋转') : (autoRotate ? '🔄 Auto-rotate' : '▶ Rotate');
+  if(topBtn) topBtn.textContent = txt;
+  if(botBtn) botBtn.textContent = txt;
+}
+function syncSpeechBtn(){
+  var b = document.getElementById('btnSpeech');
+  if(!b) return;
+  b.classList.toggle('active', speechOn);
+  b.textContent = speechOn ? (lang==='zh' ? '🔊 语音' : '🔊 Speech') : (lang==='zh' ? '🔇 静音' : '🔇 Muted');
+  b.title = speechOn ? (lang==='zh' ? '语音播报已开启，点击关闭' : 'Speech on - click to mute')
+					 : (lang==='zh' ? '语音播报已关闭，点击开启' : 'Speech off - click to enable');
+}
+function toggleSpeech(){
+  speechOn = !speechOn;   // 仅本次会话有效，刷新页面后回到静音
+  syncSpeechBtn();
+  if(!speechOn && 'speechSynthesis' in window) speechSynthesis.cancel();
+  if(speechOn) showBanner(lang==='zh' ? '🔊 语音播报已开启' : '🔊 Speech enabled', '#4CAF50');
+}
+function resetView(){ frameCurrentCell(); }
+
+var smearImages={
+  red_blood_cell:"https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Blood_smear_1.jpg/300px-Blood_smear_1.jpg",
+  reticulocyte:"https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Blood_smear_1.jpg/300px-Blood_smear_1.jpg",
+  platelet:"https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Blood_smear_1.jpg/300px-Blood_smear_1.jpg",
+  neutrophil:"https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Neutrophil_in_a_blood_smear.jpg/300px-Neutrophil_in_a_blood_smear.jpg",
+  eosinophil:"https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Eosinophil_in_a_blood_smear.jpg/300px-Eosinophil_in_a_blood_smear.jpg",
+  basophil:"https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Basophil_in_a_blood_smear.jpg/300px-Basophil_in_a_blood_smear.jpg",
+  lymphocyte:"https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Lymphocyte_in_a_blood_smear.jpg/300px-Lymphocyte_in_a_blood_smear.jpg",
+  monocyte:"https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Monocyte_in_a_blood_smear.jpg/300px-Monocyte_in_a_blood_smear.jpg",
+  pronormoblast:"https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Blood_smear_1.jpg/300px-Blood_smear_1.jpg",
+  basophilic_normoblast:"https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Blood_smear_1.jpg/300px-Blood_smear_1.jpg",
+  polychromatic_normoblast:"https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Blood_smear_1.jpg/300px-Blood_smear_1.jpg",
+  orthochromatic_normoblast:"https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Blood_smear_1.jpg/300px-Blood_smear_1.jpg",
+  megakaryocyte:"https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Blood_smear_1.jpg/300px-Blood_smear_1.jpg",
+  plasma_cell:"https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Blood_smear_1.jpg/300px-Blood_smear_1.jpg",
+  blast:"https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Blood_smear_1.jpg/300px-Blood_smear_1.jpg"
+};
+
+// ========== 核心：文件夹模型优先加载 ==========
+function loadModelFromFolder(key, td) {
+  var exts = ['.glb', '.gltf'];
+  function tryLoad(idx) {
+	if (idx >= exts.length) {
+	  getUploadedModel(key).then(function(buf){
+		if(buf){
+		  parseGLBFromBuffer(key, buf).then(function(model){
+			if(currentMesh){scene.remove(currentMesh);clearObj(currentMesh);}
+			currentMesh=model; scene.add(currentMesh); frameCurrentCell();
+			if(showLabels){clearLabels();Object.entries(td.labels).forEach(function(entry){createDraggableLabel(entry[1],getAnchor(key,entry[0]),entry[0]);});}
+		  });
+		} else {
+		  fallbackToBuildCell(key, td);
+		}
+	  });
+	  return;
+	}
+	var path = './models/' + key + exts[idx];
+	gltfLoader.load(path,
+	  function(gltf) {
+		var model = gltf.scene;
+		model.updateMatrixWorld(true);
+		var box = new THREE.Box3().setFromObject(model);
+		var center = box.getCenter(new THREE.Vector3());
+		var size = box.getSize(new THREE.Vector3());
+		var maxd = Math.max(size.x, size.y, size.z) || 1;
+		model.position.sub(center);
+		var targetSize = 3;
+		model.scale.setScalar(targetSize / maxd);
+		if(currentMesh){scene.remove(currentMesh);clearObj(currentMesh);}
+		currentMesh = model;
+		scene.add(currentMesh);
+		frameCurrentCell();
+		if(showLabels){clearLabels();Object.entries(td.labels).forEach(function(entry){createDraggableLabel(entry[1],getAnchor(key,entry[0]),entry[0]);});}
+		showBanner(i18n[lang].folder_model_loaded, '#4fc3f7');
+	  },
+	  undefined,
+	  function() { tryLoad(idx + 1); }
+	);
+  }
+  tryLoad(0);
+}
+
+// ========== 核心：文件夹涂片优先加载 ==========
+function renderSmear(key, cell, td){
+  var smearKey = cell.smearKey || key;
+  var box = document.getElementById('smearBox');
+  if(!box) return;
+  if(currentSmearURL){ URL.revokeObjectURL(currentSmearURL); currentSmearURL = null; }
+
+  getSmear(smearKey).then(function(blob){
+	if(blob){
+	  currentSmearURL = URL.createObjectURL(blob);
+	  box.innerHTML = '<img id="smearImg" src="'+currentSmearURL+'" alt="'+td.n+'" style="width:100%;border-radius:7px;border:1px solid #374151;min-height:110px;object-fit:cover;background:#000;">';
+	  var csb=document.getElementById('clearSmearBtn'); if(csb) csb.style.display = 'block';
+	  return;
+	}
+
+	var imgExts = ['.jpg', '.jpeg', '.png', '.webp'];
+	function tryImg(idx) {
+	  if (idx >= imgExts.length) {
+		var net = smearImages[smearKey];
+		if(net){
+		  box.innerHTML = '<img src="'+net+'" alt="'+td.n+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';"><div class="err" style="display:none;">'+i18n[lang].no_img+'</div>';
+		} else {
+		  box.innerHTML = '<div class="err">'+i18n[lang].no_img+'</div>';
+		}
+		var csb=document.getElementById('clearSmearBtn'); if(csb) csb.style.display = 'none';
+		return;
+	  }
+	  var imgPath = './images/' + smearKey + imgExts[idx];
+	  fetch(imgPath).then(function(r){
+		if(r.ok) {
+		  box.innerHTML = '<img src="'+imgPath+'" alt="'+td.n+'" style="width:100%;border-radius:7px;border:1px solid #374151;min-height:110px;object-fit:cover;background:#000;">';
+		  showBanner(i18n[lang].folder_smear_loaded, '#66bb6a');
+		} else {
+		  tryImg(idx + 1);
+		}
+	  }).catch(function(){ tryImg(idx + 1); });
+	}
+	tryImg(0);
+  });
+}
+
+function selectCell(key,btn,silent){
+  if(quizActive && btn) return;
+  hideLabelDetail();   // 切换细胞时自动关闭标注详情弹窗
+  cellDragging = false; if(controls) { controls.enabled = true; controls.autoRotate = autoRotate; controls.update(); }
+  clearTimeout(_dragTimer); _activePointers.clear();
+  expandHwBadge();   // 切换细胞时自动恢复署名，避免收起后找不回来
+
+  currentKey=key;
+  document.querySelectorAll('.sidebar button').forEach(function(b){if(b.id!=='quizBtn'&&b.id!=='uploadModelBtn'&&b.id!=='clearModelBtn'&&b.id!=='uploadSmearBtn'&&b.id!=='clearSmearBtn')b.classList.remove('active');});
+  if(btn)btn.classList.add('active');
+  var cell=cells[key];if(!cell)return;
+  var td=cell.t[lang];
+  var quizHide=quizActive;
+  var cn=document.getElementById('cellName'); if(cn)cn.textContent=quizHide?(lang==='zh'?'❓ 未知细胞':'❓ Unknown cell'):td.n;
+  var cd=document.getElementById('cellDesc'); if(cd)cd.textContent=quizHide?'':td.d;
+  var tagsDiv=document.getElementById('cellTags'); if(tagsDiv){tagsDiv.innerHTML='';if(!quizHide)td.tags.forEach(function(t){var s=document.createElement('span');s.className='tag';s.textContent=t;tagsDiv.appendChild(s);});}
+  var dp=document.getElementById('dimensionPanel');
+  if(dp){dp.style.display=quizHide?'none':'block';
+	var h='<b>'+i18n[lang].size_label+'：</b>'+escHtml(td.size||cell.size);
+	var ncv=td.nc||cell.nc; if(ncv) h+='<br><b>'+i18n[lang].nc_label+'：</b>'+escHtml(ncv);
+	var refv=td.ref||cell.ref; if(refv) h+='<br><b>'+i18n[lang].ref_label+'：</b>'+escHtml(refv);
+	dp.innerHTML=h;}
+
+  var secIds={txtMorph:'morph',txtStain:'stain',txtDiff:'diff',txtClin:'clin',txtCase:'case',txtLab:'lab'};
+  Object.keys(secIds).forEach(function(id){
+	var el=document.getElementById(id); if(!el) return;
+	renderRich(el, quizHide?'':(td[secIds[id]]||''), id==='txtCase');
+  });
+  var secHead={secMorphH:'sec_morph',secStainH:'sec_stain',secDiffH:'sec_diff',secClinH:'sec_clin',secCaseH:'sec_case',secLabH:'sec_lab'};
+  var caseNote=document.getElementById('caseNote'); if(caseNote) caseNote.textContent=quizHide?'':i18n[lang].case_note;
+  Object.keys(secHead).forEach(function(id){var el=document.getElementById(id); if(el) el.textContent=i18n[lang][secHead[id]];});
+
+  renderSmear(key, cell, td);
+  var sn=document.getElementById('smearNote'); if(sn)sn.textContent=quizHide?'':((td.morph||td.d).substring(0,54)+'…');
+
+  checkHasCustomModel(key);
+  loadModelFromFolder(key, td);
+
+  if(!silent && speechOn && 'speechSynthesis' in window){speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(td.n+td.d);u.lang=lang==='zh'?'zh-CN':'en-US';u.rate=0.85;speechSynthesis.speak(u);}
+}
+
+function fallbackToBuildCell(key,td){
+  if(currentMesh){scene.remove(currentMesh);clearObj(currentMesh);}
+  currentMesh=buildCell(key); scene.add(currentMesh); frameCurrentCell();
+  if(showLabels){clearLabels();Object.entries(td.labels).forEach(function(entry){createDraggableLabel(entry[1],getAnchor(key,entry[0]),entry[0]);});}
+}
+
+function showLabelDetail(labelId, labelText) {
+  if (quizActive) return;
+  var cell = cells[currentKey]; if (!cell) return;
+  var td = cell.t[lang];
+  var dn=document.getElementById('detailName'); if(dn)dn.textContent = labelText;
+  var info = (td.labelDetail && td.labelDetail[labelId]) ? td.labelDetail[labelId] : td.d;
+  var di=document.getElementById('detailInfo'); if(di) renderRich(di, info);
+  var df=document.getElementById('detailFoot');
+  if(df) df.textContent = '🩸 ' + td.n + '　📏 ' + (td.size || cell.size);
+  var detail = document.getElementById('labelDetail');
+  if(detail){detail.style.display = 'block'; detail.style.left = '50%'; detail.style.top = '50%'; detail.style.transform = 'translate(-50%,-50%)';}
+}
+function hideLabelDetail() { var ld=document.getElementById('labelDetail'); if(ld)ld.style.display = 'none'; }
+
+// ===== 点击空白处关闭标注详情弹窗 =====
+(function(){
+  function isInside(node, id){
+    var p = document.getElementById(id);
+    return !!(p && node && p.contains(node));
+  }
+  function onDocClick(e){
+    var ld = document.getElementById('labelDetail');
+    if(!ld || ld.style.display === 'none') return;
+    var t = e.target;
+    if(isInside(t,'labelDetail')) return;      // 弹窗内部：正常交互，不关
+    if(isInside(t,'quizPanel')) return;        // 测验面板内部
+    if(t && t.closest && t.closest('.tag3d')) return;  // 点的是3D标注本身
+    hideLabelDetail();
+  }
+  // capture 阶段先注册，保证标签自身点击已完成打开后再生效
+  document.addEventListener('click', onDocClick, true);
+  document.addEventListener('pointerdown', function(e){
+    var ld = document.getElementById('labelDetail');
+    if(!ld || ld.style.display === 'none') return;
+    var t = e.target;
+    if(isInside(t,'labelDetail') || isInside(t,'quizPanel')) return;
+    if(t && t.closest && t.closest('.tag3d')) return;
+    hideLabelDetail();
+  }, true);
+  // Esc 键也能关闭
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') hideLabelDetail(); });
+})();
+
+// ===== 测验面板单击折叠/展开功能（已移除拖拽）=====
+function toggleQuizPanelCollapse() {
+  var qp = document.getElementById('quizPanel');
+  if (!qp) return;
+  
+  if (!qp.classList.contains('collapsed')) {
+	// 折叠成窄边
+	qp.classList.add('collapsed');
+	qp.dataset.origStyle = JSON.stringify({
+	  width: qp.style.width, height: qp.style.padding,
+	  left: qp.style.left, top: qp.style.top, transform: qp.style.transform,
+	  borderRadius: qp.style.borderRadius, overflow: qp.style.overflow
+	});
+	
+	qp.style.width = '12px';
+	qp.style.height = '120px';
+	qp.style.padding = '0';
+	qp.style.borderRadius = '6px';
+	qp.style.overflow = 'hidden';
+	qp.style.left = 'auto';
+	qp.style.right = '10px';
+	qp.style.top = '50%';
+	qp.style.transform = 'translateY(-50%)';
+	
+	// 隐藏内容
+	var contents = qp.querySelectorAll('h3, #quizProgress, #quizCellName, #quizOptions, #quizResult, #quizClose, #quizPanelDragHandle');
+	contents.forEach(function(el) { el.style.display = 'none'; });
+	
+	// 添加窄边提示
+	if(!document.getElementById('quizCollapseHint')) {
+	  var hint = document.createElement('div');
+	  hint.id = 'quizCollapseHint';
+	  hint.style.cssText = 'width:100%;height:100%;background:#ff9800;cursor:pointer;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;text-orientation:mixed;color:#111827;font-size:11px;font-weight:bold;border-radius:6px;';
+	  hint.textContent = '测验';
+	  hint.title = '单击展开';
+	  hint.onclick = toggleQuizPanelCollapse;
+	  qp.appendChild(hint);
+	} else {
+	  document.getElementById('quizCollapseHint').style.display = 'flex';
+	}
+  } else {
+	// 展开
+	qp.classList.remove('collapsed');
+	var orig = qp.dataset.origStyle ? JSON.parse(qp.dataset.origStyle) : null;
+	if (orig) {
+	  qp.style.width = orig.width || '';
+	  qp.style.height = orig.height || '';
+	  qp.style.padding = orig.padding || '';
+	  qp.style.left = orig.left || '';
+	  qp.style.top = orig.top || '';
+	  qp.style.transform = orig.transform || '';
+	  qp.style.borderRadius = orig.borderRadius || '';
+	  qp.style.overflow = orig.overflow || '';
+	} else {
+	  qp.style.width = ''; qp.style.height = ''; qp.style.padding = '';
+	  qp.style.left = ''; qp.style.top = ''; qp.style.transform = '';
+	  qp.style.borderRadius = ''; qp.style.overflow = '';
+	}
+	
+	var contents = qp.querySelectorAll('h3, #quizProgress, #quizCellName, #quizOptions, #quizResult, #quizClose, #quizPanelDragHandle');
+	contents.forEach(function(el) { el.style.display = ''; });
+	
+	var hint = document.getElementById('quizCollapseHint');
+	if(hint) hint.style.display = 'none';
+  }
+}
+
+// ===== Quiz =====
+function startQuiz() {
+  // 如果折叠了，先展开
+  var qp = document.getElementById('quizPanel');
+  if (qp && qp.classList.contains('collapsed')) {
+	toggleQuizPanelCollapse();
+  }
+  
+  quizActive = true; quizIndex = 0; quizScore = 0;
+  var keys = Object.keys(cells); keys.sort(() => Math.random() - 0.5);
+  quizCells = keys.slice(0, 5);
+  var qp_el=document.getElementById('quizPanel'); if(qp_el)qp_el.style.display = 'block';
+  var qt=document.getElementById('quizTitle'); if(qt)qt.textContent = i18n[lang].quiz_title;
+  nextQuestion();
+}
+function nextQuestion() {
+  if (quizIndex >= quizCells.length) { showQuizResult(); return; }
+  var key = quizCells[quizIndex];
+  var cell = cells[key];
+  var qp_el=document.getElementById('quizProgress'); if(qp_el)qp_el.textContent = (quizIndex + 1) + ' / ' + quizCells.length;
+  var qcn=document.getElementById('quizCellName'); if(qcn)qcn.textContent = '🔍 请观察3D模型并识别此细胞：';
+  selectCell(key, null, true);
+  var options = [key]; var keys = Object.keys(cells);
+  while (options.length < 4) { var rk = keys[Math.floor(Math.random() * keys.length)]; if (!options.includes(rk)) options.push(rk); }
+  options.sort(() => Math.random() - 0.5);
+  var optDiv = document.getElementById('quizOptions'); if(optDiv){optDiv.innerHTML = '';}
+  options.forEach(function(rk) {
+	var btn = document.createElement('button'); btn.className = 'quizOpt';
+	btn.textContent = cells[rk].t[lang].n;
+	btn.onclick = function() { checkAnswer(btn, rk, key); };
+	if(optDiv)optDiv.appendChild(btn);
+  });
+  var qr=document.getElementById('quizResult'); if(qr)qr.innerHTML = '';
+}
+function checkAnswer(btn, selectedKey, correctKey) {
+  var opts = document.querySelectorAll('.quizOpt'); opts.forEach(function(o) { o.disabled = true; });
+  if (selectedKey === correctKey) {
+	btn.classList.add('correct'); quizScore++;
+	if (speechOn && 'speechSynthesis' in window) { var u = new SpeechSynthesisUtterance(lang==='zh'?'正确':'Correct'); u.lang = lang==='zh'?'zh-CN':'en-US'; speechSynthesis.speak(u); }
+  } else {
+	btn.classList.add('wrong');
+	opts.forEach(function(o) { if (o.textContent === cells[correctKey].t[lang].n) o.classList.add('correct'); });
+	if (speechOn && 'speechSynthesis' in window) { var u = new SpeechSynthesisUtterance(lang==='zh'?'错误':'Wrong'); u.lang = lang==='zh'?'zh-CN':'en-US'; speechSynthesis.speak(u); }
+  }
+  setTimeout(function() { quizIndex++; nextQuestion(); }, 1500);
+}
+function showQuizResult() {
+  var qcn=document.getElementById('quizCellName'); if(qcn)qcn.textContent = '';
+  var qo=document.getElementById('quizOptions'); if(qo)qo.innerHTML = '';
+  var qr=document.getElementById('quizResult'); if(qr)qr.innerHTML =
+	'<h3>' + i18n[lang].quiz_score + quizScore + '/' + quizCells.length + '</h3>' +
+	'<button onclick="startQuiz()" style="background:#ff9800;color:#fff;">' + i18n[lang].quiz_restart + '</button>' +
+	'<button onclick="exitQuiz()" style="background:#374151;color:#fff;">' + i18n[lang].quiz_exit + '</button>';
+}
+function exitQuiz() {
+  quizActive = false;
+  var qp = document.getElementById('quizPanel');
+  if (qp) {
+	qp.style.display = 'none';
+	qp.style.left = '50%'; qp.style.top = '50%';
+	qp.style.right = 'auto'; qp.style.bottom = 'auto';
+	qp.style.transform = 'translate(-50%,-50%)';
+	// 如果处于折叠状态，重置它
+	if(qp.classList.contains('collapsed')){
+		qp.classList.remove('collapsed');
+		var hint = document.getElementById('quizCollapseHint');
+		if(hint) hint.remove();
+	}
+  }
+  var qr = document.getElementById('quizResult'); if(qr)qr.innerHTML = '';
+  expandHwBadge();
+  selectCell(currentKey, null, true);
+}
+
+// ===== Init =====
+document.addEventListener('DOMContentLoaded', function(){
+  var sidebar=document.getElementById('sidebar');
+  if(sidebar){
+	var groups={'peripheral':'grp_peripheral','marrow':'grp_marrow','gran':'grp_gran','path':'grp_path'};
+	Object.entries(groups).forEach(function(entry){
+	  var gk=entry[0], gv=entry[1];
+	  var grpDiv=document.createElement('div');grpDiv.className='grp';grpDiv.setAttribute('data-i18n',gv);grpDiv.textContent=i18n[lang][gv];sidebar.appendChild(grpDiv);
+	  Object.entries(cells).filter(function(c){return c[1].group===gk;}).forEach(function(c){
+		var k=c[0], cell=c[1];
+		var b=document.createElement('button');b.textContent=cell.t[lang].n;b.onclick=function(){selectCell(k,b);};sidebar.appendChild(b);
+	  });
+	});
+  }
+
+  // 绑定测验面板（移除拖拽，改为单击折叠）
+  var qp = document.getElementById('quizPanel');
+  if (qp) {
+	var handle = document.getElementById('quizPanelDragHandle');
+	if (!handle) {
+	  handle = document.createElement('div');
+	  handle.id = 'quizPanelDragHandle';
+	  qp.insertBefore(handle, qp.firstChild);
+	}
+	// 禁用拖拽，改为单击事件
+	handle.onclick = function(e) {
+	  e.stopPropagation();
+	  toggleQuizPanelCollapse();
+	};
+	handle.style.cursor = 'pointer';
+	handle.title = '单击折叠/展开面板';
+  }
+
+  var savedLang=localStorage.getItem('lang')||'zh';
+  if(savedLang!=='zh'&&savedLang!=='en') savedLang='zh';
+  lang=savedLang; localStorage.setItem('lang',lang);
+  var ls=document.getElementById('langSel');if(ls)ls.value=lang;
+  // 语音：每次打开强制静音，清除历史偏好并终止可能残留的朗读
+  speechOn = false;
+  try { localStorage.removeItem('speechOn'); } catch(e) {}
+  try { if('speechSynthesis' in window) speechSynthesis.cancel(); } catch(e) {}
+  syncSpeechBtn();
+  buildHwBadge();
+  initThree();applyI18n();
+  var firstBtn=sidebar?sidebar.querySelector('button:not(#quizBtn):not(#uploadModelBtn):not(#clearModelBtn):not(#uploadSmearBtn):not(#clearSmearBtn)'):null;
+  selectCell('red_blood_cell', firstBtn);
+});
+</script>
+</body>
+</html>
